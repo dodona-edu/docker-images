@@ -1,18 +1,7 @@
 FROM node
 
-RUN ["npm", "install", "-g", "fs"]
-RUN ["npm", "install", "-g", "deep-equal"]
-RUN ["npm", "install", "-g",  "eslint", "--save-dev"]
-RUN ["npm", "install", "-g", "jsdom"]
-RUN ["npm", "install", "-g", "jsdom-global"]
-RUN ["npm", "install", "-g", "scratch-vm"]
-RUN ["npm", "install", "-g", "scratch-storage"]
-RUN ["npm", "install", "-g", "immutable"]
-RUN ["npm", "install", "-g", "escape-html"]
-RUN ["npm", "install", "-g", "htmlparser2"]
-RUN ["npm", "install", "-g", "minilog"]
-RUN ["npm", "install", "-g", "got"]
-RUN ["npm", "install", "-g", "socket.io-client"]
+COPY scratch.package.json /package.json
+RUN ["npm", "install"]
 
 ENV NODE_PATH="/usr/local/lib/node_modules"
 
