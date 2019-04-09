@@ -2,7 +2,7 @@ FROM openjdk:8
 
 # Install jq for json querying in bash
 RUN ["apt-get", "update"]
-RUN ["apt-get", "-y", "install", "jshon"]
+RUN ["apt-get", "-y", "install", "jshon", "bc"]
 
 # Make sure the students can't find our secret path, which is mounted in
 # /mnt with a secure random name.
