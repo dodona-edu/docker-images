@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # process arguments
 RUNNER_SCRIPT=$1
