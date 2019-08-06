@@ -15,6 +15,8 @@ RUN apt-get update && \
   Rscript -e "install.packages('jsonlite')" && \
   Rscript -e "install.packages('R6')"
 
+USER runner
+
 WORKDIR /home/runner/workdir
-COPY main.sh /main.sh
+COPY simple-main.sh /main.sh
 
