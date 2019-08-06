@@ -30,7 +30,5 @@ RUN cabal update \
  # Create the working directory
  && mkdir workdir
 
-USER root
-
 WORKDIR /home/runner/workdir
-COPY main.sh /main.sh
+COPY simple-main.sh /main.sh
