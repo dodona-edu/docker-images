@@ -21,8 +21,6 @@ USER runner
     # Create the working directory
     RUN ["mkdir", "workdir"]
 
-USER root
-
 WORKDIR /home/runner/workdir
 ENTRYPOINT [ "bash" ]
 COPY main.sh /main.sh

@@ -14,7 +14,6 @@ RUN ["useradd", "-m", "runner"]
 # As the runner user
 USER runner
 RUN ["mkdir", "/home/runner/workdir"]
-USER root
-
 WORKDIR /home/runner/workdir
+
 COPY main.sh /main.sh

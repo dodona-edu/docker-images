@@ -24,5 +24,7 @@ RUN apt-get update && \
     chown runner:runner /home/runner/workdir
 ENV PATH="/home/runner/workdir:/usr/games:${PATH}"
 
+USER runner
 WORKDIR /home/runner/workdir
+
 COPY main.sh /main.sh
