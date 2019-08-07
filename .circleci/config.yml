@@ -9,39 +9,30 @@ workflows:
       - docker/hadolint:
           name: anaconda
           dockerfiles: dodona-anaconda3.dockerfile
-          ignore-rules: 'DL3002'
       - docker/hadolint:
           name: bash
           dockerfiles: dodona-bash.dockerfile
-          ignore-rules: 'DL3002'
       - docker/hadolint:
           name: biopythia
           dockerfiles: dodona-biopythia.dockerfile
-          ignore-rules: 'DL3002'
       - docker/hadolint:
           name: csharp
           dockerfiles: dodona-csharp.dockerfile
-          ignore-rules: 'DL3002'
       - docker/hadolint:
           name: haskell
           dockerfiles: dodona-haskell.dockerfile
-          ignore-rules: 'DL3002'
       - docker/hadolint:
           name: java
           dockerfiles: dodona-java.dockerfile
-          ignore-rules: 'DL3002'
       - docker/hadolint:
           name: nodejs
           dockerfiles: dodona-nodejs.dockerfile
-          ignore-rules: 'DL3002'
       - docker/hadolint:
           name: prolog
           dockerfiles: dodona-prolog.dockerfile
-          ignore-rules: 'DL3002'
       - docker/hadolint:
           name: r
           dockerfiles: dodona-r.dockerfile
       - docker/hadolint:
           name: scratch
           dockerfiles: dodona-scratch.dockerfile
-          ignore-rules: 'DL3002'
