@@ -19,4 +19,3 @@ USER root
 
 WORKDIR /home/runner/workdir
 COPY main.sh /main.sh
-COPY logger.sh /logger.sh
