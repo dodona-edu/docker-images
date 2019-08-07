@@ -22,7 +22,7 @@ RUN apt-get update && \
     useradd -m runner && \
     mkdir /home/runner/workdir && \
     chown runner:runner /home/runner/workdir
-ENV PATH="/home/runner/workdir:/usr/games:${PATH}"
+ENV PATH="/home/runner/workdir:/usr/games:/opt/conda/bin/:${PATH}"
 
 USER runner
 WORKDIR /home/runner/workdir
