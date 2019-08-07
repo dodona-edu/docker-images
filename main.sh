@@ -1,10 +1,6 @@
-#!/bin/bash
-
-# process arguments
-RUNNER_SCRIPT=$1
+#!/bin/sh
 
 # kill all child processes on exit
 trap "pkill -P $$" EXIT
 
-# switch to user "runner" and start the script
-su runner -c "PATH='$PATH' ${RUNNER_SCRIPT}"
+"$1"

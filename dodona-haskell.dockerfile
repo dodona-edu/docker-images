@@ -31,4 +31,4 @@ RUN cabal update \
  && mkdir workdir
 
 WORKDIR /home/runner/workdir
-COPY simple-main.sh /main.sh
+COPY main.sh /main.sh
