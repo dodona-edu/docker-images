@@ -1,26 +1,15 @@
-FROM swipl:stable
+FROM swipl:8.0.3
 
 # Install python3 for processing
-RUN ["apt-get", "update"]
-RUN ["apt-get", "-y", "install", "python3"]
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3=3.5.3-1 && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get clean && \
+    chmod 711 /mnt && \
+    useradd -u 1000 -m runner && \
+    mkdir /home/runner/workdir && \
+    chown runner:runner /home/runner/workdir
 
-# Make sure the students can't find our secret path, which is mounted in
-# /mnt with a secure random name.
-RUN ["chmod", "711", "/mnt"]
-
-# Add the user which will run the student's code and the judge.
-RUN ["useradd", "-m", "runner"]
-
-# As the runner user
-WORKDIR /home/runner
 USER runner
-
-    # Install the more packages
-    # No packages yet
-
-    # Create the working directory
-    RUN ["mkdir", "workdir"]
-
 WORKDIR /home/runner/workdir
-ENTRYPOINT [ "bash" ]
 COPY main.sh /main.sh
