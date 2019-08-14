@@ -1,4 +1,4 @@
-FROM haskell:8.2
+FROM haskell:8.6.5
 
 RUN apt-get update \
  # Install jq for json querying in bash
