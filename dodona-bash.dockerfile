@@ -1,4 +1,4 @@
-FROM continuumio/anaconda3:2019.03
+FROM continuumio/anaconda3:2019.07
 
 USER root
 RUN apt-get update && \
