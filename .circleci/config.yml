@@ -36,3 +36,6 @@ workflows:
       - docker/hadolint:
           name: scratch
           dockerfiles: dodona-scratch.dockerfile
+      - docker/hadolint:
+          name: java12
+          dockerfiles: dodona-java12.dockerfile
