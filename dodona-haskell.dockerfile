@@ -27,6 +27,8 @@ RUN cabal update \
         json-builder-0.3 \
         stm-2.4.5.0 \
         gloss-1.13.0.1 \
+ # Clearing package cache
+ && rm -rf /home/runner/.cabal/packages/* \
  # Create the working directory
  && mkdir workdir
 
