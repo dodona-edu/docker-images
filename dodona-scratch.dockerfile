@@ -1,4 +1,4 @@
-FROM buildkite/puppeteer:v1.15.0
+FROM buildkite/puppeteer:v3.0.1
 
 RUN chmod 711 /mnt && \
     groupmod -n runner node && \
