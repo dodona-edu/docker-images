@@ -1,4 +1,4 @@
-FROM swipl:8.2.2
+FROM swipl:8.3.18
 
 # Install python3 for processing (and procps for pkill)
 RUN apt-get update && \
