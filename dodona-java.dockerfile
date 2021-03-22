@@ -1,4 +1,4 @@
-FROM openjdk:8
+FROM openjdk:16
 
 # Install jq for json querying in bash
 RUN apt-get update \

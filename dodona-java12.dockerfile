@@ -1,4 +1,4 @@
-FROM openjdk:12-alpine
+FROM openjdk:16
 
 # Install jq for json querying in bash
 RUN apk add --no-cache jq=1.6-r0 \
