@@ -1,4 +1,4 @@
-FROM python:3.9.2-slim-buster
+FROM python:3.9.3-slim-buster
 
 # Environment Kotlin
 ENV SDKMAN_DIR /usr/local/sdkman
