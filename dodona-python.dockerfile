@@ -1,4 +1,4 @@
-FROM python:3.9.7-slim-buster
+FROM python:3.10.0-slim-buster
 
 RUN chmod 711 /mnt && \
   useradd -m runner && \
