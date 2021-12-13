@@ -1,4 +1,4 @@
-FROM python:3.9.7-slim-buster
+FROM python:3.10.1-slim-buster
 
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \

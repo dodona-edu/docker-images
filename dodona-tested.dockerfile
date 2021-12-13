@@ -1,4 +1,4 @@
-FROM python:3.9.7-slim-buster
+FROM python:3.10.1-slim-buster
 
 # Environment Checkstyle
 ENV CHECKSTYLE_JAR /opt/checkstyle-8.41-all.jar
