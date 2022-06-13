@@ -8,29 +8,30 @@ RUN chmod 711 /mnt && \
      gcc=4:10.2.1-1 \
      g++=4:10.2.1-1 \
      fontconfig=2.13.1-4.2 \
-     libc6-dev=2.31-13+deb11u2 \
+     libc6-dev=2.31-13+deb11u3 \
      libcairo2-dev=1.16.0-5 \
      make=4.3-4.1 \
      procps=2:3.3.17-5 \
      wget=1.21-1+deb11u1 \
-     zlib1g-dev=1:1.2.11.dfsg-2 && \
+     zlib1g-dev=1:1.2.11.dfsg-2+deb11u1 && \
   rm -rf /var/lib/apt/lists/* && \
   apt-get clean && \
+  python -m pip install --upgrade pip==22.1.2 && \
   # Judge dependencies
   pip install --no-cache-dir --upgrade \
-    Pillow==9.0.1 \
+    Pillow==9.1.1 \
     cairosvg==2.5.2 \
-    jsonschema==3.2.0 \
-    mako==1.1.6 \
-    psutil==5.9.0 \
-    pydantic==1.9.0 \
-    pyhumps==3.5.3 \
-    pylint==2.12.2 \
-    pyshp==2.2.0 \
-    svg-turtle==0.4.0 \
+    jsonschema==4.6.0 \
+    mako==1.2.0 \
+    psutil==5.9.1 \
+    pydantic==1.9.1 \
+    pyhumps==3.7.1 \
+    pylint==2.14.1 \
+    pyshp==2.3.0 \
+    svg-turtle==0.4.1 \
     typing_inspect==0.7.1 && \
   # Exercise dependencies
-  pip install --no-cache-dir --upgrade numpy==1.22.2 biopython==1.79 sortedcontainers==2.4.0 pandas==1.4.1
+  pip install --no-cache-dir --upgrade numpy==1.22.4 biopython==1.79 sortedcontainers==2.4.0 pandas==1.4.2
 
 WORKDIR /tmp
 
