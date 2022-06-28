@@ -47,7 +47,7 @@ WORKDIR /tmp
 
 RUN rm fasta-36.3.8h.tar.gz fasta36-36.3.8h_04-May-2020 -r && \
   fc-cache -f && \
-  apt-get -y purge --autoremove gcc g++ libc6-dev make wget zlib1g-dev && \
+  apt-get -y purge --autoremove gcc g++ make wget && \
   mkdir -p /home/runner/workdir && \
   chown -R runner:runner /home/runner && \
   chown -R runner:runner /mnt
