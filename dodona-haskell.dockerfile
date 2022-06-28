@@ -18,17 +18,17 @@ WORKDIR /home/runner
 USER runner
 RUN cabal update \
  # happy must be installed to install haskell-src-exts
- && cabal install happy-1.19.12 \
+ && cabal install happy-1.20.0 \
  && cabal install \
-        hlint-3.2 \
-        QuickCheck-2.14.1 \
-        HUnit-1.6.0.0 \
-        MissingH-1.4.3.0 \
-        stm-2.5.0.0 \
-        gloss-1.13.1.2 \
-        ghc-lib-parser-8.10.2.20200916 \
-        splitmix-0.1.0.1 \
-        ghc-lib-parser-ex-8.10.0.16 \
+        hlint-3.4 \
+        QuickCheck-2.14.2 \
+        HUnit-1.6.2.0 \
+        MissingH-1.5.0.1 \
+        stm-2.5.0.2 \
+        gloss-1.13.2.2 \
+        ghc-lib-parser-9.2.3.20220527 \
+        splitmix-0.1.0.4 \
+        ghc-lib-parser-ex-9.2.0.3 \
  # Create the working directory
  && mkdir workdir
 
