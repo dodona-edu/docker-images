@@ -18,7 +18,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  # Install programming languages
  && apt-get install -y --no-install-recommends \
        # TESTed Java and Kotlin judge dependency
-       openjdk-17-jdk=17.0.3+7-1~deb11u1 \
+       openjdk-17-jdk=17.0.4+8-1~deb11u1 \
        checkstyle=8.36.1-1 \
        # TESTed Haskell judge dependency
        haskell-platform=2014.2.0.0.debian8 \
@@ -27,7 +27,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
        gcc=4:10.2.1-1 \
        cppcheck=2.3-1 \
        # TESTed Javascript judge dependency
-       nodejs=16.15.1-deb-1nodesource1 \
+       nodejs=16.16.0-deb-1nodesource1 \
        # TESTed bash judge dependency
        shellcheck=0.7.1-1+deb11u1 \
  && apt-get clean \
