@@ -6,7 +6,7 @@ RUN apt-get update && \
         binutils=2.35.2-2 \
         bsdmainutils=12.1.7+nmu3 \
         cowsay=3.03+dfsg2-8 \
-        curl=7.74.0-1.3+deb11u1 \
+        curl=7.74.0-1.3+deb11u2 \
         ed=1.17-1 \
         figlet=2.2.5-3+b1 \
         file=1:5.39-3 \
