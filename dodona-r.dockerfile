@@ -8,11 +8,15 @@ RUN apt-get update && \
       libcurl4-openssl-dev=7.84.0-2 \
       libfontconfig-dev=2.13.1-4.4 \
       libfreetype-dev=2.12.1+dfsg-3 \
+      libfreetype6-dev=2.12.1+dfsg-3 \
       libfribidi-dev=1.0.8-2.1 \
-      libharfbuzz-dev=2.7.4-1+b1 \
-      libnlopt-dev=2.7.1-4+b2 \
       libgsl-dev=2.7.1+dfsg-3 \
+      libharfbuzz-dev=2.7.4-1+b1 \
+      libjpeg-dev=1:2.1.2-1 \
+      libnlopt-dev=2.7.1-4+b2 \
+      libpng-dev=1.6.37-5 \
       libssl-dev=3.0.4-2 \
+      libtiff5-dev=4.4.0-3 \
       libxml2-dev=2.9.14+dfsg-1+b1 \
       procps=2:3.3.17-7+b1 \
       && \
