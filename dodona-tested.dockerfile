@@ -10,7 +10,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  # Install additional dependencies
  && apt-get install -y --no-install-recommends \
        dos2unix=7.4.1-1 \
-       curl=7.74.0-1.3+deb11u1 \
+       curl=7.74.0-1.3+deb11u2 \
        zip=3.0-12 \
        unzip=6.0-26 \
  # Add nodejs v16
