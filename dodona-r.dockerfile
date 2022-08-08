@@ -16,7 +16,7 @@ RUN apt-get update && \
       libnlopt-dev=2.7.1-4+b2 \
       libpng-dev=1.6.37-5 \
       libssl-dev=3.0.4-2 \
-      libtiff5-dev=4.4.0-3 \
+      libtiff5-dev=4.4.0-3+b1 \
       libxml2-dev=2.9.14+dfsg-1+b1 \
       procps=2:3.3.17-7+b1 \
       && \
