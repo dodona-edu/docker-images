@@ -15,6 +15,7 @@ RUN apt-get update && \
         gcc=4:10.2.1-1 \
         gcc-multilib=4:10.2.1-1 \
         imagemagick=8:6.9.11.60+dfsg-1.3 \
+        inkscape=1.0.2-4 \
         librsvg2-bin=2.50.3+dfsg-1 \
         poppler-utils=20.09.0-3.1 \
         strace=5.10-1 \
