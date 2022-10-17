@@ -1,4 +1,4 @@
-FROM python:3.10.6-slim-bullseye
+FROM python:3.11.0rc2-slim-bullseye
 
 RUN apt-get update && \
     # install procps, otherwise pkill cannot be not found
