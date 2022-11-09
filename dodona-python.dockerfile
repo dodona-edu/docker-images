@@ -8,12 +8,12 @@ RUN chmod 711 /mnt && \
      gcc=4:10.2.1-1 \
      g++=4:10.2.1-1 \
      fontconfig=2.13.1-4.2 \
-     libc6-dev=2.31-13+deb11u3 \
+     libc6-dev=2.31-13+deb11u5 \
      libcairo2-dev=1.16.0-5 \
      make=4.3-4.1 \
      procps=2:3.3.17-5 \
      wget=1.21-1+deb11u1 \
-     zlib1g-dev=1:1.2.11.dfsg-2+deb11u1 && \
+     zlib1g-dev=1:1.2.11.dfsg-2+deb11u2 && \
   rm -rf /var/lib/apt/lists/* && \
   apt-get clean && \
   # Judge dependencies

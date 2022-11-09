@@ -10,11 +10,11 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  # Install additional dependencies
  && apt-get install -y --no-install-recommends \
        dos2unix=7.4.1-1 \
-       curl=7.74.0-1.3+deb11u2 \
+       curl=7.74.0-1.3+deb11u3 \
        zip=3.0-12 \
-       unzip=6.0-26 \
- # Add nodejs v16
- && bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_16.x | bash -' \
+       unzip=6.0-26+deb11u1 \
+ # Add nodejs v18
+ && bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_18.x | bash -' \
  # Install programming languages
  && apt-get install -y --no-install-recommends \
        # TESTed Java and Kotlin judge dependency
@@ -27,7 +27,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
        gcc=4:10.2.1-1 \
        cppcheck=2.3-1 \
        # TESTed Javascript judge dependency
-       nodejs=16.16.0-deb-1nodesource1 \
+       nodejs=18.12.1-deb-1nodesource1 \
        # TESTed bash judge dependency
        shellcheck=0.7.1-1+deb11u1 \
  && apt-get clean \
