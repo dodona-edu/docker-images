@@ -4,21 +4,21 @@ FROM r-base:4.2.1
 # /mnt with a secure random name.
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-      default-jdk=2:1.11-72 \
-      libcurl4-openssl-dev=7.86.0-1 \
-      libfontconfig-dev=2.13.1-4.5 \
-      libfreetype-dev=2.12.1+dfsg-3 \
-      libfreetype6-dev=2.12.1+dfsg-3 \
+      default-jdk=2:1.17-74 \
+      libcurl4-openssl-dev=7.87.0-2 \
+      libfontconfig-dev=2.14.1-3 \
+      libfreetype-dev=2.12.1+dfsg-4 \
+      libfreetype6-dev=2.12.1+dfsg-4 \
       libfribidi-dev=1.0.8-2.1 \
       libgsl-dev=2.7.1+dfsg-3+b1 \
-      libharfbuzz-dev=5.2.0-2 \
+      libharfbuzz-dev=6.0.0-1 \
       libjpeg-dev=1:2.1.2-1+b1 \
-      libnlopt-dev=2.7.1-4+b2 \
-      libpng-dev=1.6.38-2 \
-      libssl-dev=3.0.7-1 \
-      libtiff5-dev=4.4.0-5+b1 \
-      libxml2-dev=2.9.14+dfsg-1+b1 \
-      procps=2:3.3.17-7.1 \
+      libnlopt-dev=2.7.1-4+b4 \
+      libpng-dev=1.6.39-2 \
+      libssl-dev=3.0.7-2 \
+      libtiff5-dev=4.5.0-4 \
+      libxml2-dev=2.9.14+dfsg-1.1+b3 \
+      procps=2:4.0.2-3 \
       && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* && \
