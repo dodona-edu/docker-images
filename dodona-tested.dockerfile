@@ -9,10 +9,14 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && apt-get update \
  # Install additional dependencies
  && apt-get install -y --no-install-recommends \
+       procps=2:3.3.17-5 \
        dos2unix=7.4.1-1 \
-       curl=7.74.0-1.3+deb11u3 \
+       curl=7.74.0-1.3+deb11u5 \
        zip=3.0-12 \
        unzip=6.0-26+deb11u1 \
+ && curl https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb --output packages-microsoft-prod.deb \
+ && dpkg -i packages-microsoft-prod.deb \
+ && rm packages-microsoft-prod.deb \
  # Add nodejs v18
  && bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_18.x | bash -' \
  # Install programming languages
@@ -27,13 +31,15 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
        gcc=4:10.2.1-1 \
        cppcheck=2.3-1 \
        # TESTed Javascript judge dependency
-       nodejs=18.12.1-deb-1nodesource1 \
+       nodejs=18.13.0-deb-1nodesource1 \
        # TESTed bash judge dependency
        shellcheck=0.7.1-1+deb11u1 \
+       # C# dependency
+       dotnet-sdk-6.0=6.0.405-1 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  # TESTed Judge depencencies
- && pip install --no-cache-dir --upgrade jsonschema==3.2.0 psutil==5.7.0 mako==1.1.2 pydantic==1.7.3 typing_inspect==0.6.0 pylint==2.6.0 lark==0.10.1 pyyaml==5.4 Pygments==2.7.4 python-i18n==0.3.9 \
+ && pip install --no-cache-dir --upgrade jsonschema==4.4.0 psutil==5.9.0 mako==1.1.6 pydantic==1.9.0 typing_inspect==0.7.1 pylint==2.6.0 lark==0.10.1 pyyaml==6.0 Pygments==2.11.2 python-i18n==0.3.9 \
  # TESTed Kotlin judge dependencies
  && bash -c 'set -o pipefail && curl -s "https://get.sdkman.io?rcupdate=false" | bash' \
  && chmod a+x "$SDKMAN_DIR/bin/sdkman-init.sh" \
