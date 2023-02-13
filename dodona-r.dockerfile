@@ -1,4 +1,4 @@
-FROM r-base:4.2.1
+FROM r-base:4.2.2
 
 # Make sure the students can't find our secret path, which is mounted in
 # /mnt with a secure random name.
@@ -6,12 +6,12 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends \
       default-jdk=2:1.17-74 \
       libcurl4-openssl-dev=7.87.0-2 \
-      libfontconfig-dev=2.14.1-3 \
+      libfontconfig-dev=2.14.1-4 \
       libfreetype-dev=2.12.1+dfsg-4 \
       libfreetype6-dev=2.12.1+dfsg-4 \
       libfribidi-dev=1.0.8-2.1 \
       libgsl-dev=2.7.1+dfsg-3+b1 \
-      libharfbuzz-dev=6.0.0-1 \
+      libharfbuzz-dev=6.0.0+dfsg-3 \
       libjpeg-dev=1:2.1.2-1+b1 \
       libnlopt-dev=2.7.1-4+b4 \
       libpng-dev=1.6.39-2 \
