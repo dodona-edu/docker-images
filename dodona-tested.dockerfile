@@ -11,7 +11,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && apt-get install -y --no-install-recommends \
        procps=2:3.3.17-5 \
        dos2unix=7.4.1-1 \
-       curl=7.74.0-1.3+deb11u5 \
+       curl=7.74.0-1.3+deb11u7 \
        zip=3.0-12 \
        unzip=6.0-26+deb11u1 \
  && curl https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb --output packages-microsoft-prod.deb \
@@ -31,7 +31,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
        gcc=4:10.2.1-1 \
        cppcheck=2.3-1 \
        # TESTed Javascript judge dependency
-       nodejs=18.14.0-deb-1nodesource1 \
+       nodejs=18.15.0-deb-1nodesource1 \
        # TESTed bash judge dependency
        shellcheck=0.7.1-1+deb11u1 \
        # C# dependency
