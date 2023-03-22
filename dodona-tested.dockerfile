@@ -39,7 +39,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  # TESTed Judge depencencies
- && pip install --no-cache-dir --upgrade jsonschema==4.4.0 psutil==5.9.0 mako==1.1.6 pydantic==1.9.0 typing_inspect==0.7.1 pylint==2.6.0 lark==0.10.1 pyyaml==6.0 Pygments==2.11.2 python-i18n==0.3.9 \
+ && pip install --no-cache-dir --upgrade jsonschema==4.17.3 psutil==5.9.4 mako==1.2.4 pydantic==1.10.6 typing_inspect==0.8.0 pylint==2.17.1 lark==1.1.5 pyyaml==6.0 Pygments==2.14.0 python-i18n==0.3.9 \
  # TESTed Kotlin judge dependencies
  && bash -c 'set -o pipefail && curl -s "https://get.sdkman.io?rcupdate=false" | bash' \
  && chmod a+x "$SDKMAN_DIR/bin/sdkman-init.sh" \
