@@ -5,7 +5,7 @@ FROM r-base:4.2.3
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
       default-jdk=2:1.17-74 \
-      libcurl4-openssl-dev=7.88.1-6 \
+      libcurl4-openssl-dev=7.88.1-7 \
       libfontconfig-dev=2.14.1-4 \
       libfreetype-dev=2.12.1+dfsg-4 \
       libfreetype6-dev=2.12.1+dfsg-4 \
