@@ -3,12 +3,7 @@ FROM python:3.11.2-slim-bullseye
 ENV NODE_PATH /usr/lib/node_modules
 RUN apt-get update \
  # Install additional dependencies
- && apt-get install -y --no-install-recommends \
-       procps=2:3.3.17-5 \
-       dos2unix=7.4.1-1 \
-       curl=7.74.0-1.3+deb11u7 \
-       zip=3.0-12 \
-       unzip=6.0-26+deb11u1 \
+ && apt-get install -y --no-install-recommends procps dos2unix curl zip unzip \
  # Add nodejs v18
  && bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_18.x | bash -' \
  # Install programming languages
