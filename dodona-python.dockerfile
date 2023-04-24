@@ -25,7 +25,7 @@ RUN chmod 711 /mnt && \
     psutil==5.9.4 \
     pydantic==1.10.4 \
     pyhumps==3.8.0 \
-    pylint==2.16.1 \
+    pylint==2.17.2 \
     pyshp==2.3.1 \
     svg-turtle==0.4.1 \
     typing-inspect==0.8.0 && \
