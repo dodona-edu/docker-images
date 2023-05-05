@@ -5,10 +5,10 @@ FROM r-base:4.2.3
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
       default-jdk=2:1.17-74 \
-      libcurl4-openssl-dev=7.88.1-7 \
+      libcurl4-openssl-dev=7.88.1-9 \
       libfontconfig-dev=2.14.1-4 \
-      libfreetype-dev=2.12.1+dfsg-4 \
-      libfreetype6-dev=2.12.1+dfsg-4 \
+      libfreetype-dev=2.12.1+dfsg-5 \
+      libfreetype6-dev=2.12.1+dfsg-5 \
       libfribidi-dev=1.0.8-2.1 \
       libgsl-dev=2.7.1+dfsg-3+b1 \
       libharfbuzz-dev=6.0.0+dfsg-3 \
@@ -17,7 +17,7 @@ RUN apt-get update && \
       libpng-dev=1.6.39-2 \
       libssl-dev=3.0.8-1 \
       libtiff5-dev=4.5.0-5 \
-      libxml2-dev=2.9.14+dfsg-1.1+b3 \
+      libxml2-dev=2.9.14+dfsg-1.2 \
       procps=2:4.0.2-3 \
       && \
   apt-get clean && \
