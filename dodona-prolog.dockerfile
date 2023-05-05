@@ -1,10 +1,10 @@
-FROM swipl:8.2.4
+FROM swipl:9.0.4
 
 # Install python3 for processing (and procps for pkill)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        python3=3.5.3-1 \
-        procps=2:3.3.12-3+deb9u1 \
+        python3=3.9.2-3 \
+        procps=2:3.3.17-5 \
         && \
     rm -rf /var/lib/apt/lists/* && \
     apt-get clean && \
