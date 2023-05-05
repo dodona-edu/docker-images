@@ -11,10 +11,10 @@ RUN apt-get update && \
         figlet=2.2.5-3+b1 \
         file=1:5.39-3 \
         fortune-mod=1:1.99.1-7.1 \
-        git=1:2.30.2-1 \
+        git=1:2.30.2-1+deb11u2 \
         gcc=4:10.2.1-1 \
         gcc-multilib=4:10.2.1-1 \
-        imagemagick=8:6.9.11.60+dfsg-1.3 \
+        imagemagick=8:6.9.11.60+dfsg-1.3+deb11u1 \
         inkscape=1.0.2-4 \
         librsvg2-bin=2.50.3+dfsg-1 \
         poppler-utils=20.09.0-3.1+deb11u1 \

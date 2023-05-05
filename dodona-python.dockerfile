@@ -8,7 +8,7 @@ RUN chmod 711 /mnt && \
      gcc=4:10.2.1-1 \
      g++=4:10.2.1-1 \
      fontconfig=2.13.1-4.2 \
-     libc6-dev=2.31-13+deb11u5 \
+     libc6-dev=2.31-13+deb11u6 \
      libcairo2-dev=1.16.0-5 \
      make=4.3-4.1 \
      procps=2:3.3.17-5 \
