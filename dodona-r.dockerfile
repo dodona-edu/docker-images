@@ -5,20 +5,20 @@ FROM r-base:4.3.0
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
       default-jdk=2:1.17-74 \
-      libcurl4-openssl-dev=7.88.1-9 \
+      libcurl4-openssl-dev=7.88.1-10 \
       libfontconfig-dev=2.14.1-4 \
       libfreetype-dev=2.12.1+dfsg-5 \
       libfreetype6-dev=2.12.1+dfsg-5 \
-      libfribidi-dev=1.0.8-2.1 \
-      libgsl-dev=2.7.1+dfsg-3+b1 \
+      libfribidi-dev=1.0.13-3 \
+      libgsl-dev=2.7.1+dfsg-5 \
       libharfbuzz-dev=6.0.0+dfsg-3 \
       libjpeg-dev=1:2.1.5-2 \
-      libnlopt-dev=2.7.1-4+b4 \
+      libnlopt-dev=2.7.1-5 \
       libpng-dev=1.6.39-2 \
-      libssl-dev=3.0.8-1 \
-      libtiff5-dev=4.5.0-5 \
+      libssl-dev=3.0.9-1 \
+      libtiff5-dev=4.5.1~rc3-1 \
       libxml2-dev=2.9.14+dfsg-1.2 \
-      procps=2:4.0.2-3 \
+      procps=2:4.0.3-1 \
       && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* && \

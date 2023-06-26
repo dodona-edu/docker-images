@@ -1,4 +1,4 @@
-FROM python:3.11.3-slim-bullseye
+FROM python:3.11.4-slim-bullseye
 
 # Environment Kotlin
 ENV SDKMAN_DIR /usr/local/sdkman
@@ -22,7 +22,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  # Install programming languages
  && apt-get install -y --no-install-recommends \
        # TESTed Java and Kotlin judge dependency
-       openjdk-17-jdk=17.0.6+10-1~deb11u1 \
+       openjdk-17-jdk=17.0.7+7-1~deb11u1 \
        checkstyle=8.36.1-1 \
        # TESTed Haskell judge dependency
        haskell-platform=2014.2.0.0.debian8 \
@@ -31,7 +31,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
        gcc=4:10.2.1-1 \
        cppcheck=2.3-1 \
        # TESTed Javascript judge dependency
-       nodejs=18.16.0-deb-1nodesource1 \
+       nodejs=18.16.1-deb-1nodesource1 \
        # TESTed bash judge dependency
        shellcheck=0.7.1-1+deb11u1 \
        # C# dependency
