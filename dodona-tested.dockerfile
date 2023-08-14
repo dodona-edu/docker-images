@@ -5,6 +5,7 @@ ENV SDKMAN_DIR /usr/local/sdkman
 ENV PATH $SDKMAN_DIR/candidates/kotlin/current/bin:$PATH
 ENV NODE_PATH /usr/lib/node_modules
 # Add manual directory for default-jdk
+# hadolint ignore=DL3008
 RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && apt-get update \
  # Install additional dependencies
@@ -19,7 +20,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && rm packages-microsoft-prod.deb \
  # Add nodejs v18
  && bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_18.x | bash -' \
- # Install programming languages
+ # Install programming languages \
  && apt-get install -y --no-install-recommends \
        # TESTed Java and Kotlin judge dependency
        openjdk-17-jdk \
