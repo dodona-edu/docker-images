@@ -22,7 +22,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  # Install programming languages
  && apt-get install -y --no-install-recommends \
        # TESTed Java and Kotlin judge dependency
-       openjdk-17-jdk=17.0.7+7-1~deb11u1 \
+       openjdk-17-jdk \
        checkstyle=8.36.1-1 \
        # TESTed Haskell judge dependency
        haskell-platform=2014.2.0.0.debian8 \
@@ -31,7 +31,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
        gcc=4:10.2.1-1 \
        cppcheck=2.3-1 \
        # TESTed Javascript judge dependency
-       nodejs=18.16.1-deb-1nodesource1 \
+       nodejs \
        # TESTed bash judge dependency
        shellcheck=0.7.1-1+deb11u1 \
        # C# dependency
@@ -39,7 +39,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  # TESTed Judge depencencies
- && pip install --no-cache-dir --upgrade psutil==5.9.4 mako==1.1.6 pydantic==1.9.2 jsonschema==4.17.3 typing_inspect==0.8.0 pyyaml==6.0 Pygments==2.14.0 python-i18n==0.3.9 pylint==2.17.1 \
+ && pip install --no-cache-dir --upgrade psutil==5.9.5 attrs==22.2.0 cattrs==23.1.2 jsonschema==4.18.4 typing_inspect==0.9.0 pyyaml==6.0 Pygments==2.15.1 python-i18n==0.3.9 pylint==2.17.1 \
  # TESTed Kotlin judge dependencies
  && bash -c 'set -o pipefail && curl -s "https://get.sdkman.io?rcupdate=false" | bash' \
  && chmod a+x "$SDKMAN_DIR/bin/sdkman-init.sh" \
