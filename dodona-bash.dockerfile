@@ -6,10 +6,12 @@ RUN apt-get update && \
         binutils=2.35.2-2 \
         bsdmainutils=12.1.7+nmu3 \
         cowsay=3.03+dfsg2-8 \
+        chromium=115.0.5790.170-1~deb11u1 \
         curl=7.74.0-1.3+deb11u7 \
         ed=1.17-1 \
         figlet=2.2.5-3+b1 \
         file=1:5.39-3 \
+        fonts-noto-color-emoji=0~20200916-1 \
         fortune-mod=1:1.99.1-7.1 \
         git=1:2.30.2-1+deb11u2 \
         gcc=4:10.2.1-1 \
@@ -29,6 +31,7 @@ RUN apt-get update && \
     apt-get clean && \
     # Judge dependencies
     pip install --no-cache-dir --upgrade pygments==2.11.2 && \
+    pip install --no-cache-dir --upgrade html2image==2.0.4.3 && \
     chmod 711 /mnt && \
     useradd -m runner && \
     mkdir /home/runner/workdir && \
