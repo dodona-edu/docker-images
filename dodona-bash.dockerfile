@@ -1,15 +1,18 @@
 FROM python:3.11.4-slim-bullseye
 
+# hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \
         bc=1.07.1-2+b2 \
         binutils=2.35.2-2 \
         bsdmainutils=12.1.7+nmu3 \
         cowsay=3.03+dfsg2-8 \
+        chromium \
         curl=7.74.0-1.3+deb11u7 \
         ed=1.17-1 \
         figlet=2.2.5-3+b1 \
         file=1:5.39-3 \
+        fonts-noto-color-emoji \
         fortune-mod=1:1.99.1-7.1 \
         git=1:2.30.2-1+deb11u2 \
         gcc=4:10.2.1-1 \
@@ -29,6 +32,7 @@ RUN apt-get update && \
     apt-get clean && \
     # Judge dependencies
     pip install --no-cache-dir --upgrade pygments==2.11.2 && \
+    pip install --no-cache-dir --upgrade html2image==2.0.4.3 && \
     chmod 711 /mnt && \
     useradd -m runner && \
     mkdir /home/runner/workdir && \
