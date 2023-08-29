@@ -1,4 +1,4 @@
-FROM haskell:9.4.5
+FROM haskell:9.6.2
 
 RUN apt-get update \
  # Install jq for json querying in bash
@@ -18,17 +18,17 @@ WORKDIR /home/runner
 USER runner
 RUN cabal update \
  # happy must be installed to install haskell-src-exts
- && cabal install happy-1.20.0 \
+ && cabal install happy-1.20.1.1 \
  && cabal install \
-        hlint-3.5 \
-        QuickCheck-2.14.2 \
         HUnit-1.6.2.0 \
-        MissingH-1.5.0.1 \
-        stm-2.5.1.0 \
+        MissingH-1.6.0.0 \
+        QuickCheck-2.14.3 \
+        ghc-lib-parser-9.6.2.20230523 \
+        ghc-lib-parser-ex-9.6.0.2 \
         gloss-1.13.2.2 \
-        ghc-lib-parser-9.4.4.20221225 \
+        hlint-3.6.1 \
         splitmix-0.1.0.4 \
-        ghc-lib-parser-ex-9.4.0.0 \
+        stm-2.5.1.0 \
  # Create the working directory
  && mkdir workdir
 
