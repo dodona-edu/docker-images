@@ -77,7 +77,6 @@ RUN apt-get update && \
       , 'latticeExtra' \
       , 'leaps' \
       , 'lexicon' \
-      , 'lift' \
       , 'lubridate' \
       , 'multcomp' \
       , 'node2vec' \
