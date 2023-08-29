@@ -1,4 +1,4 @@
-FROM python:3.11.4-slim-bullseye
+FROM python:3.11.5-slim-bullseye
 
 # Add architecture repositories for ARM32
 RUN dpkg --add-architecture armhf \
