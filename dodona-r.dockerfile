@@ -5,19 +5,17 @@ FROM r-base:4.3.1
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
       default-jdk=2:1.17-74 \
-      libcurl4-openssl-dev=7.88.1-10 \
-      libfontconfig-dev=2.14.1-4 \
-      libfreetype-dev=2.12.1+dfsg-5 \
-      libfreetype6-dev=2.12.1+dfsg-5 \
+      libcurl4-openssl-dev=8.2.1-1 \
+      libfontconfig-dev=2.14.2-4 \
+      libfreetype-dev=2.13.1+dfsg-1 \
+      libfreetype6-dev=2.13.1+dfsg-1 \
       libfribidi-dev=1.0.13-3 \
       libgsl-dev=2.7.1+dfsg-5 \
-      libharfbuzz-dev=6.0.0+dfsg-3 \
-      libjpeg-dev=1:2.1.5-2 \
-      libnlopt-dev=2.7.1-5 \
-      libpng-dev=1.6.39-2 \
-      libssl-dev=3.0.9-1 \
-      libtiff5-dev=4.5.1~rc3-1 \
-      libxml2-dev=2.9.14+dfsg-1.2 \
+      libharfbuzz-dev=8.0.1-1 \
+      libnlopt-dev=2.7.1-5+b1 \
+      libssl-dev=3.0.10-1 \
+      libtiff5-dev=4.5.1+git230720-1 \
+      libxml2-dev=2.9.14+dfsg-1.3 \
       procps=2:4.0.3-1 \
       && \
   apt-get clean && \
