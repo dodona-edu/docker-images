@@ -82,6 +82,7 @@ RUN apt-get update && \
       , 'node2vec' \
       , 'plotrix' \
       , 'pls' \
+      , 'polite' \
       , 'qdap' \
       , 'randomForest' \
       , 'reshape2' \
@@ -110,7 +111,6 @@ RUN apt-get update && \
       , 'vader' \
       , 'wordcloud' \
       , 'wordcloud2' \
-      , 'polite' \
     )), warning = function(w) stop(w))" \
     -e "library(devtools)" \
     -e "devtools::install_github('DougLuke/UserNetR')"
