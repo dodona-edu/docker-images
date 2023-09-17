@@ -110,6 +110,7 @@ RUN apt-get update && \
       , 'vader' \
       , 'wordcloud' \
       , 'wordcloud2' \
+      , 'polite' \
     )), warning = function(w) stop(w))" \
     -e "library(devtools)" \
     -e "devtools::install_github('DougLuke/UserNetR')"
