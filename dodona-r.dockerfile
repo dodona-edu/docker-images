@@ -66,6 +66,7 @@ RUN apt-get update && \
       , 'gridBase' \
       , 'gridGraphics' \
       , 'gridExtra' \
+      , 'httr2' \
       , 'igraph' \
       , 'iml' \
       , 'intergraph' \
