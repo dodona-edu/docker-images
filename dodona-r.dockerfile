@@ -5,10 +5,9 @@ FROM r-base:4.3.1
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
       default-jdk=2:1.17-74 \
-      libcurl4-openssl-dev=8.2.1-1 \
-      libfontconfig-dev=2.14.2-4 \
-      libfreetype-dev=2.13.1+dfsg-1 \
-      libfreetype6-dev=2.13.1+dfsg-1 \
+      libcurl4-openssl-dev \
+      libfontconfig-dev \
+      libfreetype-dev \
       libfribidi-dev=1.0.13-3 \
       libgsl-dev=2.7.1+dfsg-5 \
       libharfbuzz-dev=8.0.1-1 \
