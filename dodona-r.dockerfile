@@ -1,7 +1,6 @@
 FROM r-base:4.3.1
 
-# Make sure the students can't find our secret path, which is mounted in
-# /mnt with a secure random name.
+# hadolint ignore=DL3008
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
       default-jdk=2:1.17-74 \
