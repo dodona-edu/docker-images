@@ -1,4 +1,4 @@
-FROM haskell:9.6.2
+FROM haskell:9.6.3
 
 RUN apt-get update \
  # Install jq for json querying in bash
@@ -21,7 +21,7 @@ RUN cabal update \
  && cabal install happy-1.20.1.1 \
  && cabal install \
         HUnit-1.6.2.0 \
-        MissingH-1.6.0.0 \
+        MissingH-1.6.0.1 \
         QuickCheck-2.14.3 \
         ghc-lib-parser-9.6.2.20230523 \
         ghc-lib-parser-ex-9.6.0.2 \
