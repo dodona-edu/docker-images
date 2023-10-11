@@ -3,7 +3,7 @@ FROM r-base:4.3.1
 # hadolint ignore=DL3008
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-      default-jdk=2:1.17-74 \
+      default-jdk \
       libcurl4-openssl-dev \
       libfontconfig-dev \
       libfreetype-dev \

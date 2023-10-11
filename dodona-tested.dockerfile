@@ -1,4 +1,4 @@
-FROM python:3.11.5-slim-bullseye
+FROM python:3.12.0-slim-bullseye
 
 # Environment Kotlin
 ENV SDKMAN_DIR /usr/local/sdkman
@@ -12,7 +12,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && apt-get install -y --no-install-recommends \
        procps=2:3.3.17-5 \
        dos2unix=7.4.1-1 \
-       curl=7.74.0-1.3+deb11u7 \
+       curl \
        zip=3.0-12 \
        unzip=6.0-26+deb11u1 \
  && curl https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb --output packages-microsoft-prod.deb \
@@ -40,7 +40,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  # TESTed Judge depencencies
- && pip install --no-cache-dir --upgrade psutil==5.9.5 attrs==22.2.0 cattrs==23.1.2 jsonschema==4.18.4 typing_inspect==0.9.0 pyyaml==6.0 Pygments==2.15.1 python-i18n==0.3.9 pylint==2.17.1 \
+ && pip install --no-cache-dir --upgrade psutil==5.9.5 attrs==23.1.0 cattrs==23.1.2 jsonschema==4.19.1 typing_inspect==0.9.0 pyyaml==6.0.1 Pygments==2.16.1 python-i18n==0.3.9 pylint==3.0.1 \
  # TESTed Kotlin judge dependencies
  && bash -c 'set -o pipefail && curl -s "https://get.sdkman.io?rcupdate=false" | bash' \
  && chmod a+x "$SDKMAN_DIR/bin/sdkman-init.sh" \

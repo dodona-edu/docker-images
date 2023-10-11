@@ -1,5 +1,6 @@
-FROM python:3.11.5-slim-bullseye
+FROM python:3.12.0-slim-bullseye
 
+# hadolint ignore=DL3008
 RUN chmod 711 /mnt && \
   useradd -m runner && \
   apt-get update && \
@@ -8,7 +9,7 @@ RUN chmod 711 /mnt && \
      gcc=4:10.2.1-1 \
      g++=4:10.2.1-1 \
      fontconfig=2.13.1-4.2 \
-     libc6-dev=2.31-13+deb11u6 \
+     libc6-dev \
      libcairo2-dev=1.16.0-5 \
      make=4.3-4.1 \
      procps=2:3.3.17-5 \
@@ -18,19 +19,19 @@ RUN chmod 711 /mnt && \
   apt-get clean && \
   # Judge dependencies
   pip install --no-cache-dir --upgrade \
-    Pillow==9.4.0 \
-    cairosvg==2.6.0 \
-    jsonschema==4.17.3 \
+    Pillow==10.0.1 \
+    cairosvg==2.7.1 \
+    jsonschema==4.19.1 \
     mako==1.2.4 \
-    psutil==5.9.4 \
-    pydantic==1.10.4 \
+    psutil==5.9.5 \
+    pydantic==2.4.2 \
     pyhumps==3.8.0 \
-    pylint==2.17.2 \
+    pylint==3.0.1 \
     pyshp==2.3.1 \
-    svg-turtle==0.4.1 \
-    typing-inspect==0.8.0 && \
+    svg-turtle==0.4.2 \
+    typing-inspect==0.9.0 && \
   # Exercise dependencies
-  pip install --no-cache-dir --upgrade numpy==1.24.2 biopython==1.81 sortedcontainers==2.4.0 pandas==1.5.3
+  pip install --no-cache-dir --upgrade numpy==1.26.0 biopython==1.81 sortedcontainers==2.4.0 pandas==2.1.1
 
 WORKDIR /tmp
 
