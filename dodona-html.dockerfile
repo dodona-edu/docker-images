@@ -12,9 +12,9 @@ RUN apt-get update && \
     chown -R runner:runner /home/runner && \
     chown -R runner:runner /mnt && \
     pip install --no-cache-dir --upgrade \
-        beautifulsoup4==4.11.2 \
+        beautifulsoup4==4.12.2 \
         cssselect==1.2.0 \
-        lxml==4.9.2 \
+        lxml==4.9.3 \
         tinycss2==1.2.1 \
         py-emmet==1.2.0 \
         html-similarity==0.3.3 \

@@ -1,17 +1,17 @@
 FROM python:3.12.0-slim-bullseye
 
 # Add architecture repositories for ARM32
-# hadolint ignore=DL3003
+# hadolint ignore=DL3003,DL3008
 RUN dpkg --add-architecture armhf \
  && apt-get update \
  # Install additional dependencies for fetching and building packages
- && apt-get install -y --no-install-recommends curl=7.74.0-1.3+deb11u7 \
+ && apt-get install -y --no-install-recommends curl \
  # Judge compilation dependencies
  && apt-get install -y --no-install-recommends gcc=4:10.2.1-1 \
  # Runtime dependencies (x86 32-bit)
- && apt-get install -y --no-install-recommends libc6-dev-i386=2.31-13+deb11u6 lib32gcc-10-dev=10.2.1-6 \
+ && apt-get install -y --no-install-recommends libc6-dev-i386 lib32gcc-10-dev=10.2.1-6 \
  # Runtime dependencies (ARM 32-bit)
- && apt-get install -y --no-install-recommends libc6:armhf=2.31-13+deb11u6 \
+ && apt-get install -y --no-install-recommends libc6:armhf \
  # Added for compiling and running Assembly (x86, x64, ARM, AArch64)
  && apt-get install -y --no-install-recommends libc6-dev-arm64-cross=2.31-9cross4 gcc-aarch64-linux-gnu=4:10.2.1-1 binutils-aarch64-linux-gnu=2.35.2-2 libglib2.0-0=2.66.8-1 \
  && apt-get install -y --no-install-recommends libc6-dev-armhf-cross=2.31-9cross4 gcc-arm-linux-gnueabihf=4:10.2.1-1 binutils-arm-linux-gnueabihf=2.35.2-2 \

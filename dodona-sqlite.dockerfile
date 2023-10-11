@@ -13,8 +13,8 @@ RUN apt-get update && \
     chown -R runner:runner /home/runner && \
     chown -R runner:runner /mnt && \
     pip install --no-cache-dir --upgrade \
-        pandas==1.5.3 \
-        sqlparse==0.4.2
+        pandas==2.1.1 \
+        sqlparse==0.4.4
 
 USER runner
 WORKDIR /home/runner/workdir

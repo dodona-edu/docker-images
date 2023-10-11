@@ -8,7 +8,7 @@ RUN apt-get update && \
         bsdmainutils=12.1.7+nmu3 \
         cowsay=3.03+dfsg2-8 \
         chromium \
-        curl=7.74.0-1.3+deb11u7 \
+        curl \
         ed=1.17-1 \
         figlet=2.2.5-3+b1 \
         file \
@@ -19,7 +19,7 @@ RUN apt-get update && \
         gcc-multilib=4:10.2.1-1 \
         imagemagick \
         inkscape=1.0.2-4 \
-        librsvg2-bin=2.50.3+dfsg-1 \
+        librsvg2-bin \
         poppler-utils=20.09.0-3.1+deb11u1 \
         procps \
         strace=5.10-1 \
