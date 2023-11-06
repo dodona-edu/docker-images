@@ -1,4 +1,4 @@
-FROM r-base:4.3.1
+FROM r-base:4.3.2
 
 # hadolint ignore=DL3008
 RUN apt-get update && \
