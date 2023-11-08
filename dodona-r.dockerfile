@@ -1,4 +1,4 @@
-FROM r-base:4.3.1
+FROM r-base:4.3.2
 
 # hadolint ignore=DL3008
 RUN apt-get update && \
@@ -14,7 +14,7 @@ RUN apt-get update && \
       libssl-dev \
       libtiff5-dev=4.5.1+git230720-1 \
       libxml2-dev=2.9.14+dfsg-1.3 \
-      procps=2:4.0.3-1 \
+      libproc2-0 \
       && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* && \
