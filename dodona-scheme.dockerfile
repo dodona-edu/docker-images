@@ -1,4 +1,4 @@
-FROM racket/racket:8.10
+FROM racket/racket:8.11
 
 # add generic tools
 RUN apt-get --allow-releaseinfo-change update \
