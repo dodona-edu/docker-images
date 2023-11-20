@@ -10,11 +10,13 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && apt-get update \
  # Install additional dependencies
  && apt-get install -y --no-install-recommends \
-       procps=2:3.3.17-5 \
-       dos2unix=7.4.1-1 \
+       procps \
+       dos2unix \
        curl \
-       zip=3.0-12 \
-       unzip=6.0-26+deb11u1 \
+       zip \
+       unzip \
+       # Bash language dependencies
+       bc binutils bsdmainutils cowsay ed figlet file toilet tree vim xxd \
  && curl https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb --output packages-microsoft-prod.deb \
  && dpkg -i packages-microsoft-prod.deb \
  && rm packages-microsoft-prod.deb \
