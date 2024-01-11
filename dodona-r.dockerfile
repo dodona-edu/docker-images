@@ -7,13 +7,13 @@ RUN apt-get update && \
       libcurl4-openssl-dev \
       libfontconfig-dev \
       libfreetype-dev \
-      libfribidi-dev=1.0.13-3 \
+      libfribidi-dev \
       libgsl-dev \
-      libharfbuzz-dev=8.0.1-1 \
-      libnlopt-dev=2.7.1-5+b1 \
+      libharfbuzz-dev \
+      libnlopt-dev \
       libssl-dev \
-      libtiff5-dev=4.5.1+git230720-1 \
-      libxml2-dev=2.9.14+dfsg-1.3 \
+      libtiff5-dev \
+      libxml2-dev \
       libproc2-0 \
       && \
   apt-get clean && \

@@ -1,4 +1,4 @@
-FROM python:3.12.0-slim-bullseye
+FROM python:3.12.1-slim-bullseye
 
 # hadolint ignore=DL3008
 RUN chmod 711 /mnt && \
