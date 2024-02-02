@@ -27,7 +27,7 @@ RUN cabal update \
         ghc-lib-parser-9.8.1.20231121 \
         ghc-lib-parser-ex-9.8.0.0 \
         gloss-1.13.2.2 \
-        hlint-3.6.1 \
+        hlint-3.8 \
         splitmix-0.1.0.5 \
         stm-2.5.2.1 \
  # Create the working directory
