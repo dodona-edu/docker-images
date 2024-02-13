@@ -8,13 +8,14 @@ RUN apt-get update && \
       libfontconfig-dev \
       libfreetype-dev \
       libfribidi-dev \
+      libglpk-dev \
       libgsl-dev \
       libharfbuzz-dev \
       libnlopt-dev \
+      libproc2-0 \
       libssl-dev \
       libtiff5-dev \
       libxml2-dev \
-      libproc2-0 \
       && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* && \

@@ -13,11 +13,11 @@ RUN dpkg --add-architecture armhf \
  # Runtime dependencies (ARM 32-bit)
  && apt-get install -y --no-install-recommends libc6:armhf \
  # Added for compiling and running Assembly (x86, x64, ARM, AArch64)
- && apt-get install -y --no-install-recommends libc6-dev-arm64-cross=2.31-9cross4 gcc-aarch64-linux-gnu=4:10.2.1-1 binutils-aarch64-linux-gnu=2.35.2-2 libglib2.0-0=2.66.8-1 \
+ && apt-get install -y --no-install-recommends libc6-dev-arm64-cross=2.31-9cross4 gcc-aarch64-linux-gnu=4:10.2.1-1 binutils-aarch64-linux-gnu=2.35.2-2 libglib2.0-0 \
  && apt-get install -y --no-install-recommends libc6-dev-armhf-cross=2.31-9cross4 gcc-arm-linux-gnueabihf=4:10.2.1-1 binutils-arm-linux-gnueabihf=2.35.2-2 \
  && apt-get install -y --no-install-recommends valgrind=1:3.16.1-1 \
  # Build tools
- && apt-get install -y --no-install-recommends ninja-build=1.10.1-1 bison=2:3.7.5+dfsg-1 flex=2.6.4-8 libglib2.0-dev=2.66.8-1 pkg-config=0.29.2-1 build-essential=12.9 \
+ && apt-get install -y --no-install-recommends ninja-build=1.10.1-1 bison=2:3.7.5+dfsg-1 flex=2.6.4-8 libglib2.0-dev pkg-config=0.29.2-1 build-essential=12.9 \
  # Remove conflict with Valgrind+qemu-user
  && apt-get remove -y binfmt-support \
  # Cleanup package manager files
