@@ -6,7 +6,7 @@ RUN apk add --no-cache jq=1.7.1-r0 \
  # /mnt with a secure random name.
  && chmod 711 /mnt \
  # Add the user which will run the student's code and the judge.
- && adduser -S runner \
+ && adduser -u 1000 -S runner \
  && rm -rf /var/cache/apk/*
 
 # As the runner user
