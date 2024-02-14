@@ -13,6 +13,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-instal
     git \
     graphviz \
     libfmt-dev \
+    make \
     p7zip-full \
     pandoc \
     python3 \
