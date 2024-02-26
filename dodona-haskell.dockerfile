@@ -1,4 +1,4 @@
-FROM haskell:9.8.1
+FROM haskell:9.8.2
 
 # hadolint ignore=DL3008
 RUN apt-get update \
