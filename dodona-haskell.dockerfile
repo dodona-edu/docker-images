@@ -24,8 +24,8 @@ RUN cabal update \
         HUnit-1.6.2.0 \
         MissingH-1.6.0.1 \
         QuickCheck-2.14.3 \
-        ghc-lib-parser-9.8.1.20231121 \
-        ghc-lib-parser-ex-9.8.0.0 \
+        ghc-lib-parser-9.8.2.20240223 \
+        ghc-lib-parser-ex-9.8.0.2 \
         gloss-1.13.2.2 \
         hlint-3.8 \
         splitmix-0.1.0.5 \
