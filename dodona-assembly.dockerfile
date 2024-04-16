@@ -1,4 +1,4 @@
-FROM python:3.12.2-slim-bullseye
+FROM python:3.12.3-slim-bullseye
 
 # Add architecture repositories for ARM32
 # hadolint ignore=DL3003,DL3008
