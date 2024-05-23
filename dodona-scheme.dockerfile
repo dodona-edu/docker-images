@@ -7,6 +7,7 @@ RUN apt-get --allow-releaseinfo-change update \
     && apt-get clean \
     # add racket dependencies
     && raco pkg install -i --auto --binary-lib --no-cache --no-docs rackunit r5rs \
+    && raco pkg install -i --auto --no-cache --no-docs r7rs \
     # follow Dodona conventions
     && chmod 711 /mnt \
     && useradd -m runner \
