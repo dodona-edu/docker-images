@@ -4,7 +4,7 @@ ARG LLVM_VERSION="13.0.0"
 ARG LLVM_SHA256="9680c841b5ceffa51f21d0d2ddd7573447b659d1889b83c153b7473342b22a49"
 
 
-# hadolint ignore=DL3008,DL3013,DL4006
+# hadolint ignore=DL3013,DL4006
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     cmake \
     g++ \

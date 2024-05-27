@@ -1,6 +1,5 @@
 FROM r-base:4.4.0
 
-# hadolint ignore=DL3008
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
       default-jdk \

@@ -1,6 +1,5 @@
 FROM python:3.12.3-slim-bullseye
 
-# hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \
         bc=1.07.1-2+b2 \

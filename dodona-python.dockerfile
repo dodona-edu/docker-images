@@ -1,6 +1,5 @@
 FROM python:3.12.3-slim-bullseye
 
-# hadolint ignore=DL3008
 RUN chmod 711 /mnt && \
   useradd -m runner && \
   apt-get update && \
