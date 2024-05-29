@@ -26,7 +26,7 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  && dpkg -i packages-microsoft-prod.deb \
  && rm packages-microsoft-prod.deb \
  # JavaScript dependencies
- && bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_21.x | bash -' \
+ && bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_22.x | bash -' \
  # Haskell dependencies
  && bash -c "set -o pipefail && curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 BOOTSTRAP_HASKELL_MINIMAL=1 sh" \
  && bash -c "source /root/.ghcup/env && ghcup install ghc 9.6 --isolate $HASKELL_DIR/ghc" \
