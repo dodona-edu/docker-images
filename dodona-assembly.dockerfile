@@ -1,7 +1,7 @@
 FROM python:3.12.3-slim-bullseye
 
 # Add architecture repositories for ARM32
-# hadolint ignore=DL3003,DL3008
+# hadolint ignore=DL3003
 RUN dpkg --add-architecture armhf \
  && apt-get update \
  # Install additional dependencies for fetching and building packages

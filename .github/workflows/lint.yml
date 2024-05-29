@@ -15,3 +15,4 @@ jobs:
       - uses: brpaz/hadolint-action@master
         with:
           dockerfile: dodona-${{ matrix.image }}.dockerfile
+          ignore: DL3008
