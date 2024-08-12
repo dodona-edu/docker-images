@@ -1,4 +1,4 @@
-FROM python:3.12.4-slim-bullseye
+FROM python:3.12.5-slim-bullseye
 
 ARG LLVM_VERSION="13.0.0"
 ARG LLVM_SHA256="9680c841b5ceffa51f21d0d2ddd7573447b659d1889b83c153b7473342b22a49"
