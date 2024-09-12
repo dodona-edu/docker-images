@@ -1,4 +1,4 @@
-FROM python:3.12.4-slim-bullseye
+FROM python:3.12.6-slim-bullseye
 
 RUN chmod 711 /mnt && \
   useradd -m runner && \
