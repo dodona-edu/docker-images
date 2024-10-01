@@ -67,7 +67,9 @@ RUN mkdir -p /usr/share/man/man1mkdir -p /usr/share/man/man1 \
  # Add the user which will run the student's code and the judge.
  && useradd -m runner \
  && mkdir /home/runner/workdir \
- && chown -R runner:runner /home/runner/workdir
+ && chown -R runner:runner /home/runner/workdir \
+ # Extra dependencies made available to python users
+ && pip install --no-cache-dir --upgrade matplotlib==3.9.1
 
 USER runner
 WORKDIR /home/runner/workdir
