@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [assembly, bash, c, compilers, csharp, haskell, html, java, java21, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
+        image: [assembly, bash, c, compilers, csharp, docker, haskell, html, java, java21, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
