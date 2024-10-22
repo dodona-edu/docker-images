@@ -1,31 +1,21 @@
-FROM gcr.io/kaniko-project/executor:v1.23.2-slim AS kaniko
+FROM busybox:musl
 
-FROM hadolint/hadolint:2.12.0-debian
+COPY --from=hadolint/hadolint:2.12.0 /bin/hadolint /bin/hadolint
+COPY --from=ghcr.io/jqlang/jq:1.7.1 /jq /bin/jq
+COPY --from=gcr.io/kaniko-project/executor:v1.23.2-slim /kaniko /kaniko
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates=20210119 \
-        jq=1.6-2.1 \
-        sudo=1.9.5p2-3+deb11u1 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+ENV SSL_CERT_DIR=/kaniko/ssl/certs
 
-COPY --from=kaniko /kaniko/executor /kaniko/executor2
-
-RUN chmod 777 /kaniko && \
-    # kaniko requires root permissions to unpack the base image with proper permissions
-    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
-    printf '#!/bin/sh\nsudo /kaniko/executor2 "$@"' > /kaniko/executor && \
-    chmod +x /kaniko/executor && \
+# kaniko requires root permissions to unpack the base image with proper permissions
+RUN printf 'runner:x:0:0:runner:/home/runner:/bin/sh' > /etc/passwd && \
     # Make sure the students can't find our secret path, which is mounted in
     # /mnt with a secure random name.
-    chmod 711 /mnt && \
-    # Add the user which will run the student's code and the judge.
-    useradd -m runner --groups sudo
+    mkdir /mnt && \
+    chmod 711 /mnt
 
 # As the runner user
 USER runner
-RUN mkdir /home/runner/workdir
+RUN mkdir -p /home/runner/workdir
 
 WORKDIR /home/runner/workdir
 
