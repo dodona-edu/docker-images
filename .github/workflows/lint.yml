@@ -16,4 +16,4 @@ jobs:
         with:
           dockerfile: dodona-${{ matrix.image }}.dockerfile
           error_level: 2
-          config_file: ../../hadolint.yaml
+          config_file: ./hadolint.yaml
