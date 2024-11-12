@@ -10,8 +10,8 @@ jobs:
       matrix:
         image: [assembly, bash, c, compilers, csharp, docker, haskell, html, java, java21, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
     runs-on: ubuntu-latest
-    container:
-      image: hadolint/hadolint:latest
     steps:
       - uses: actions/checkout@v4
-      - run: hadolint --ignore DL3008 dodona-${{ matrix.image }}.dockerfile
+      - uses: jbergstroem/hadolint-gh-action@v1
+        with:
+          dockerfile: dodona-${{ matrix.image }}.dockerfile
