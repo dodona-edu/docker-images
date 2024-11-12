@@ -15,3 +15,4 @@ jobs:
       - uses: jbergstroem/hadolint-gh-action@v1
         with:
           dockerfile: dodona-${{ matrix.image }}.dockerfile
+          error_level: 2
