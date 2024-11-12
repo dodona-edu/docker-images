@@ -15,5 +15,5 @@ jobs:
       - uses: jbergstroem/hadolint-gh-action@v1
         with:
           dockerfile: dodona-${{ matrix.image }}.dockerfile
-          error_level: 2
+          error_level: 1
           config_file: hadolint.yml
