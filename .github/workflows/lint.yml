@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: brpaz/hadolint-action@master
+      - uses: jbergstroem/hadolint-gh-action@v1
         with:
           dockerfile: dodona-${{ matrix.image }}.dockerfile
-          ignore: DL3008
+          error_level: 1
+          config_file: hadolint.yml
