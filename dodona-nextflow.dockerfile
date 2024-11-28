@@ -1,11 +1,10 @@
+FROM amazoncorretto:21-al2023-headless
 ARG NXF_VER=24.10.2
-FROM nextflow/nextflow:${NXF_VER}
-ARG NXF_VER
 
 RUN chmod 711 /mnt \
-    && useradd -m runner \
-    && dnf install -y --setopt=install_weak_deps=False --best jq perl unzip \
-    && dnf clean all
+    && dnf install -y --setopt=install_weak_deps=False --best procps-ng shadow-utils which jq perl unzip \
+    && dnf clean all \
+    && useradd -m runner
 
 USER runner
 
@@ -15,10 +14,12 @@ ENV NXF_HOME="/home/runner/.nextflow"
 ENV NXF_OFFLINE="true"
 ENV FASTQC_HOME="/home/runner/.fastqc"
 
-RUN mkdir -p "$NXF_HOME/framework/$NXF_VER" \
-    && curl -fLo "$NXF_HOME/framework/$NXF_VER/nextflow-$NXF_VER-one.jar" "https://www.nextflow.io/releases/v$NXF_VER/nextflow-$NXF_VER-one.jar" \
-    && mkdir ~/bin \
+RUN mkdir ~/bin \
     && pushd ~/bin \
+    && curl -fLO "https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow" \
+    && chmod +x nextflow \
+    && mkdir -p "$NXF_HOME/framework/$NXF_VER" \
+    && curl -fLo "$NXF_HOME/framework/$NXF_VER/nextflow-$NXF_VER-one.jar" "https://www.nextflow.io/releases/v$NXF_VER/nextflow-$NXF_VER-one.jar" \
     && curl -fLO 'https://repo1.maven.org/maven2/org/codenarc/CodeNarc/3.5.0-groovy-4.0/CodeNarc-3.5.0-groovy-4.0-all.jar' \
     && curl -fLO 'https://github.com/awslabs/linter-rules-for-nextflow/releases/download/v0.1.0/linter-rules-0.1.jar' \
     && curl -fLO 'https://repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar' \
