@@ -1,14 +1,16 @@
 FROM amazoncorretto:21-al2023-headless
 ARG NXF_VER=24.10.2
+ARG FASTQC_VER=0.11.9
+ARG MULTIQC_VER=1.25.2
 
 RUN chmod 711 /mnt \
-    && dnf install -y --setopt=install_weak_deps=False --best procps-ng shadow-utils which jq perl unzip \
+    && dnf install -y --setopt=install_weak_deps=False --best procps-ng shadow-utils which jq perl python3-pip python3-setuptools unzip \
     && dnf clean all \
     && useradd -m runner
 
 USER runner
 
-ENV PATH="/home/runner/bin:$PATH"
+ENV PATH="/home/runner/bin:/home/runner/.local/bin:$PATH"
 ENV NXF_VER=${NXF_VER}
 ENV NXF_HOME="/home/runner/.nextflow"
 ENV NXF_OFFLINE="true"
@@ -28,13 +30,14 @@ RUN mkdir ~/bin \
     && chmod +x nextflow-linter \
     && popd \
     && TMPFILE=$(mktemp) \
-    && curl -fLo "$TMPFILE" "https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.11.9.zip" \
+    && curl -fLo "$TMPFILE" "https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v$FASTQC_VER.zip" \
     && mkdir "$FASTQC_HOME" \
     && ln -s "$FASTQC_HOME" "$FASTQC_HOME/FastQC" \
     && unzip "$TMPFILE" -d "$FASTQC_HOME" \
     && rm "$TMPFILE" "$FASTQC_HOME/FastQC" \
     && chmod +x "$FASTQC_HOME/fastqc" \
     && ln -s "$FASTQC_HOME/fastqc" "$HOME/bin/fastqc" \
+    && pip3 install --no-cache-dir "multiqc==$MULTIQC_VER" \
     && mkdir -p "$HOME/workdir"
 
 WORKDIR /home/runner/workdir
