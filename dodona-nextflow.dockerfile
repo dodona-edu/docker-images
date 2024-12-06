@@ -2,6 +2,7 @@ FROM amazoncorretto:21-al2023-headless
 ARG NXF_VER=24.10.2
 ARG FASTQC_VER=0.11.9
 ARG MULTIQC_VER=1.25.2
+ARG TRIMMOMATIC_VER=0.39
 
 RUN chmod 711 /mnt \
     && dnf install -y --setopt=install_weak_deps=False --best procps-ng shadow-utils which jq perl python3-pip python3-setuptools unzip \
@@ -38,6 +39,13 @@ RUN mkdir ~/bin \
     && chmod +x "$FASTQC_HOME/fastqc" \
     && ln -s "$FASTQC_HOME/fastqc" "$HOME/bin/fastqc" \
     && pip3 install --no-cache-dir "multiqc==$MULTIQC_VER" \
+    && curl -fLo "$TMPFILE" "http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-$TRIMMOMATIC_VER.zip" \
+    && TMPFOLDER=$(mktemp -d) \
+    && unzip "$TMPFILE" -d "$TMPFOLDER/" \
+    && mv "$TMPFOLDER/Trimmomatic-$TRIMMOMATIC_VER/trimmomatic-$TRIMMOMATIC_VER.jar" "$HOME/bin/trimmomatic-$TRIMMOMATIC_VER.jar" \
+    && rm -r "$TMPFILE" "$TMPFOLDER" \
+    && printf "#!/bin/sh\njava -jar \"$HOME/bin/trimmomatic-$TRIMMOMATIC_VER.jar\"" > "$HOME/bin/trimmomatic" \
+    && chmod +x "$HOME/bin/trimmomatic" \
     && mkdir -p "$HOME/workdir"
 
 WORKDIR /home/runner/workdir
