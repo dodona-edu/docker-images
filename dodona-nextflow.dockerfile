@@ -17,7 +17,8 @@ ENV NXF_HOME="/home/runner/.nextflow"
 ENV NXF_OFFLINE="true"
 ENV FASTQC_HOME="/home/runner/.fastqc"
 
-RUN mkdir ~/bin \
+RUN mkdir -p ~/workdir \
+    && mkdir ~/bin \
     && pushd ~/bin \
     && curl -fLO "https://github.com/nextflow-io/nextflow/releases/download/v$NXF_VER/nextflow" \
     && chmod +x nextflow \
@@ -43,10 +44,10 @@ RUN mkdir ~/bin \
     && TMPFOLDER=$(mktemp -d) \
     && unzip "$TMPFILE" -d "$TMPFOLDER/" \
     && mv "$TMPFOLDER/Trimmomatic-$TRIMMOMATIC_VER/trimmomatic-$TRIMMOMATIC_VER.jar" "$HOME/bin/trimmomatic-$TRIMMOMATIC_VER.jar" \
+    && mv "$TMPFOLDER/Trimmomatic-$TRIMMOMATIC_VER/adapters/"* "$HOME/workdir" \
     && rm -r "$TMPFILE" "$TMPFOLDER" \
     && printf "#!/bin/sh\njava -jar \"$HOME/bin/trimmomatic-$TRIMMOMATIC_VER.jar\"" > "$HOME/bin/trimmomatic" \
-    && chmod +x "$HOME/bin/trimmomatic" \
-    && mkdir -p "$HOME/workdir"
+    && chmod +x "$HOME/bin/trimmomatic"
 
 WORKDIR /home/runner/workdir
 
