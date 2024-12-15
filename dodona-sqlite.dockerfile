@@ -1,4 +1,4 @@
-FROM python:3.12.3-slim-bullseye
+FROM python:3.12.4-slim-bullseye
 
 RUN apt-get update && \
     # install procps, otherwise pkill cannot be not found
@@ -14,6 +14,7 @@ RUN apt-get update && \
     chown -R runner:runner /mnt && \
     pip install --no-cache-dir --upgrade \
         pandas==2.1.1 \
+        numpy==1.26.4 \
         sqlparse==0.4.4
 
 USER runner
