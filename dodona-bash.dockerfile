@@ -32,7 +32,7 @@ RUN  <<EOF
     wget \
     zip
 
-  rm -rf /var/lib/apt/lists/* && \
+  rm -rf /var/lib/apt/lists/*
   apt-get clean
 
   # Judge dependencies
