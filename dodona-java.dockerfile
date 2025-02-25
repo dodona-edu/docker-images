@@ -1,11 +1,11 @@
 FROM eclipse-temurin:8-jdk-noble
 
-# Install jq for json querying in bash
 RUN <<EOF
   set -eux
 
+  # Install jq for json querying in bash
   apt-get update
-  apt-get install -y --no-install-recommends jshon
+  apt-get install -y --no-install-recommends jq
 
   rm -rf /var/lib/apt/lists/*
   apt-get clean
