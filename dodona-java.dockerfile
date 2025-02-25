@@ -1,20 +1,20 @@
-FROM eclipse-temurin:8-jdk-noble
+FROM amazoncorretto:8-alpine-jdk
 
+# Install jq for json querying in bash
 RUN <<EOF
   set -eux
 
-  # Install jq for json querying in bash
-  apt-get update
-  apt-get install -y --no-install-recommends jq
+  apk add --no-cache jq
 
-  rm -rf /var/lib/apt/lists/*
-  apt-get clean
 
   # Make sure the students can't find our secret path, which is mounted in
   # /mnt with a secure random name.
   chmod 711 /mnt
+
   # Add the user which will run the student's code and the judge.
-  useradd -m runner
+  adduser -u 1000 -S runner
+  rm -rf /var/cache/apk/*
+
 EOF
 
 # As the runner user
