@@ -1,6 +1,8 @@
 FROM python:3.12.9-slim-bookworm
 
 RUN <<EOF
+  set -eux
+
   apt-get update
 
   # install procps, otherwise pkill cannot be not found
@@ -10,6 +12,7 @@ RUN <<EOF
 
   rm -rf /var/lib/apt/lists/*
   apt-get clean
+
   chmod 711 /mnt
   useradd -m runner
   mkdir -p /home/runner/workdir
