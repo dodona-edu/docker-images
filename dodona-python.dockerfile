@@ -24,7 +24,7 @@ RUN <<EOF
     pyhumps==3.8.0 \
     pylint==3.0.1 \
     pyshp==2.3.1 \
-    setuptools \
+    setuptools=75.8.1 \
     svg-turtle==0.4.2 \
     typing-inspect==0.9.0
 
