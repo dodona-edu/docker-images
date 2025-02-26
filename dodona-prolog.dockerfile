@@ -7,7 +7,7 @@ RUN <<EOF
   apt-get update
   apt-get install -y --no-install-recommends \
     python3 \
-    procps \
+    procps
 
   rm -rf /var/lib/apt/lists/*
   apt-get clean
