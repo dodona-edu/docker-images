@@ -24,7 +24,7 @@ RUN <<EOF
     pyhumps==3.8.0 \
     pylint==3.0.1 \
     pyshp==2.3.1 \
-    setuptools=75.8.1 \
+    setuptools==75.8.1 \
     svg-turtle==0.4.2 \
     typing-inspect==0.9.0
 
@@ -39,6 +39,7 @@ RUN <<EOF
   useradd -m runner
   mkdir -p /home/runner/workdir
   chown -R runner:runner /home/runner
+  # This is different from the other images, but no idea why. Might be removed.
   chown -R runner:runner /mnt
 EOF
 
