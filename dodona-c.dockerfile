@@ -1,26 +1,36 @@
-FROM python:3.12.4-slim-bullseye
+FROM python:3.13.2-slim-bookworm
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-                       jshon=20131010-3+b1 \
-                       libgtest-dev=1.10.0.20201025-1.1 \
-                       g++=4:10.2.1-1 \
-                       make=4.3-4.1 \
-                       cmake=3.18.4-2+deb11u1 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    chmod 711 /mnt && \
-    useradd -m runner
+RUN  <<EOF
+  set -eux
+
+  apt-get update
+  apt-get install -y --no-install-recommends \
+      jshon \
+      libgtest-dev \
+      g++ \
+      make \
+      cmake
+
+  apt-get clean
+  rm -rf /var/lib/apt/lists/*
+
+  chmod 711 /mnt && \
+  useradd -m runner
+EOF
 
 WORKDIR /usr/src/gtest
 
-RUN cmake CMakeLists.txt && \
-    make && \
-    cp -- lib/*.a /usr/lib && \
-    mkdir /usr/local/lib/gtest && \
-    ln -s /usr/lib/libgtest.a /usr/local/lib/gtest && \
-    ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest
-    
+RUN  <<EOF
+  set -eux
+
+  cmake CMakeLists.txt
+  make
+  cp -- lib/*.a /usr/lib
+  mkdir /usr/local/lib/gtest
+  ln -s /usr/lib/libgtest.a /usr/local/lib/gtest
+  ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest
+EOF
+
 # As the runner user
 USER runner
 RUN mkdir /home/runner/workdir
