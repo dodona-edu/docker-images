@@ -1,6 +1,6 @@
 FROM busybox:musl
 
-COPY --from=ghcr.io/bond-009/dodona-containerfile-evaluator:v0.3.0 /bin/dodona-containerfile-evaluator /bin/dodona-containerfile-evaluator
+COPY --from=ghcr.io/dodona-edu/dodona-containerfile-evaluator:master /bin/dodona-containerfile-evaluator /bin/dodona-containerfile-evaluator
 COPY --from=hadolint/hadolint:2.12.0 /bin/hadolint /bin/hadolint
 COPY --from=ghcr.io/jqlang/jq:1.7.1 /jq /bin/jq
 COPY --from=gcr.io/kaniko-project/executor:v1.23.2-slim /kaniko /kaniko
