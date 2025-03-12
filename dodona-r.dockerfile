@@ -11,7 +11,7 @@ RUN <<EOF
     libfreetype-dev \
     libfribidi-dev \
     libgit2-dev \
-    libglib2.0-0t64=2.83.3-2 \
+    libglib2.0-0t64 \
     libglpk-dev \
     libgsl-dev \
     libharfbuzz-dev \

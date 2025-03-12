@@ -4,6 +4,7 @@ ARG FASTQC_VER=0.11.9
 ARG MULTIQC_VER=1.25.2
 ARG TRIMMOMATIC_VER=0.39
 
+# hadolint ignore=DL3041
 RUN chmod 711 /mnt \
     && dnf install -y --setopt=install_weak_deps=False --best procps-ng shadow-utils which jq perl python3-pip python3-setuptools unzip \
     && dnf clean all \
