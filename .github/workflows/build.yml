@@ -1,10 +1,8 @@
-name: Publish
-
 on: [push]
 
-vars:
-  all_images: [assembly, bash, c, compilers, csharp, docker, haskell, html, java, java21, nextflow, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
-  amd64_only: [assembly, compilers, java, r]
+env:
+  ALL_IMAGES: assembly bash c compilers csharp docker haskell html java java21 nextflow nodejs postgres prolog python r scheme sqlite tested
+  AMD64_ONLY: assembly compilers java r
 
 jobs:
   build:
@@ -12,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ${{ vars.all_images }}
+        image: ${{ env.ALL_IMAGES }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
@@ -28,4 +26,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         dockerfile: dodona-${{ matrix.image }}.dockerfile
         snapshot: true
-        platforms: ${{ contains(vars.amd64_only, matrix.image) && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+        platforms: ${{ contains(env.AMD64_ONLY, matrix.image) && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
