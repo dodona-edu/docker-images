@@ -1,7 +1,6 @@
 on: [push]
 
 env:
-  ALL_IMAGES: assembly bash c compilers csharp docker haskell html java java21 nextflow nodejs postgres prolog python r scheme sqlite tested
   AMD64_ONLY: assembly compilers java r
 
 jobs:
@@ -10,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: ${{ env.ALL_IMAGES }}
+        image: [assembly, bash, c, compilers, csharp, docker, haskell, html, java, java21, nextflow, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
