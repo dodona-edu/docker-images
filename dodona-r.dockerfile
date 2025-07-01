@@ -1,4 +1,4 @@
-FROM r-base:4.4.2
+FROM r-base:4.5.1
 
 RUN <<EOF
   set -eux
