@@ -1,7 +1,9 @@
 FROM mono:6.12.0.182
 
-# Fix EOL buster repos + install packages
-RUN set -eux; \
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Fix EOL buster repos + install jshon and time
+RUN set -euxo pipefail; \
   # Rewrite to archive mirrors (primary mirrors dropped buster)
   sed -ri \
     -e 's#http://deb.debian.org/debian#http://archive.debian.org/debian#g' \
