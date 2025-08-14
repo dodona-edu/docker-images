@@ -1,11 +1,5 @@
 FROM mono:6.12.0.182
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends jshon && \
-    apt-get install -y --no-install-recommends time && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
 # Fix EOL buster repos + install packages
 RUN set -eux; \
   # Rewrite to archive mirrors (primary mirrors dropped buster)
