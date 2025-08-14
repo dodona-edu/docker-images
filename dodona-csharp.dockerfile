@@ -1,8 +1,8 @@
 FROM mono:6.12.0.182
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends jshon=20131010-3+b1 && \
-    apt-get install -y --no-install-recommends time=1.7-25.1+b1 && \
+    apt-get install -y --no-install-recommends jshon && \
+    apt-get install -y --no-install-recommends time && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
