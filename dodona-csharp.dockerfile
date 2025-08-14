@@ -16,6 +16,7 @@ RUN set -eux; \
       -e 's#http://security.debian.org/debian-security#http://archive.debian.org/debian-security#g'; \
   # Archived suites often have expired metadata; disable date check
   printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99no-check-valid-until; \
+  apt-get update --allow-releaseinfo-change; \
   apt-get install -y --no-install-recommends jshon time; \
   apt-get clean; rm -rf /var/lib/apt/lists/*
 
