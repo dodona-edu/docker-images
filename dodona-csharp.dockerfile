@@ -1,10 +1,26 @@
 FROM mono:6.12.0.182
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends jshon=20131010-3+b1 && \
-    apt-get install -y --no-install-recommends time=1.7-25.1+b1 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Fix EOL buster repos + install jshon and time
+RUN set -euxo pipefail; \
+  # Rewrite to archive mirrors (primary mirrors dropped buster)
+  sed -ri \
+    -e 's#http://deb.debian.org/debian#http://archive.debian.org/debian#g' \
+    -e 's#http://deb.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
+    -e 's#http://security.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
+    /etc/apt/sources.list; \
+  # If there are extra list files, rewrite those too (no-op if none)
+  find /etc/apt/sources.list.d -maxdepth 1 -type f -print0 2>/dev/null \
+    | xargs -0 -r sed -ri \
+      -e 's#http://deb.debian.org/debian#http://archive.debian.org/debian#g' \
+      -e 's#http://deb.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
+      -e 's#http://security.debian.org/debian-security#http://archive.debian.org/debian-security#g'; \
+  # Archived suites often have expired metadata; disable date check
+  printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99no-check-valid-until; \
+  apt-get update --allow-releaseinfo-change; \
+  apt-get install -y --no-install-recommends jshon time; \
+  apt-get clean; rm -rf /var/lib/apt/lists/*
 
 # Make sure the students can't find our secret path, which is mounted in
 # /mnt with a secure random name.

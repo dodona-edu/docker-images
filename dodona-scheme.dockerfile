@@ -2,7 +2,7 @@ FROM racket/racket:8.13
 
 # add generic tools
 RUN apt-get --allow-releaseinfo-change update \
-    && apt-get install --no-install-recommends -y jq=1.6-2.1 \
+    && apt-get install --no-install-recommends -y jq \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     # add racket dependencies
