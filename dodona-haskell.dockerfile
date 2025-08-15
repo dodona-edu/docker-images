@@ -1,6 +1,27 @@
 FROM haskell:9.8.2
 
-RUN apt-get update \
+
+
+
+
+RUN set -eux; \
+ # Rewrite primary sources
+ sed -ri \
+   -e 's#http://deb.debian.org/debian#http://archive.debian.org/debian#g' \
+   -e 's#http://deb.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
+   -e 's#http://security.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
+   /etc/apt/sources.list; \
+ # Rewrite any extra list files if present (no-op if dir missing)
+ if [ -d /etc/apt/sources.list.d ]; then \
+   find /etc/apt/sources.list.d -maxdepth 1 -type f -exec sed -ri \
+     -e 's#http://deb.debian.org/debian#http://archive.debian.org/debian#g' \
+     -e 's#http://deb.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
+     -e 's#http://security.debian.org/debian-security#g; s#/debian-security#http://archive.debian.org/debian-security#g' \
+     {} +; \
+ fi; \
+ # Archived suites often have expired metadata; ignore its date
+ printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99no-check-valid-until; \
+ apt-get update; \
  # Install jq for json querying in bash
  # Install freeglut headers for gloss compilation
  && apt-get install -y --no-install-recommends \
