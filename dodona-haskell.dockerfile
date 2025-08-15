@@ -24,7 +24,7 @@ RUN set -eux; \
  apt-get update; \
  # Install jq for json querying in bash
  # Install freeglut headers for gloss compilation
- && apt-get install -y --no-install-recommends \
+ apt-get install -y --no-install-recommends \
         jq \
         freeglut3-dev \
  && rm -rf /var/lib/apt/lists/* \
