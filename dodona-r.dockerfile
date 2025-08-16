@@ -4,6 +4,7 @@ RUN <<EOF
   set -eux
 
   apt-get update
+  apt-get -y dist-upgrade
   apt-get install -y --no-install-recommends \
     default-jdk \
     libcurl4-openssl-dev \
