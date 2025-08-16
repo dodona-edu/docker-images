@@ -21,8 +21,8 @@ RUN <<'EOF'
   Package: *
   Pin: release a=unstable
   Pin-Priority: 100
-  PREF
-  
+PREF
+
   apt-get update
   
   # Install build deps; let APT resolve matching runtimes from the same suite
