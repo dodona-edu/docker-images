@@ -119,6 +119,13 @@ RUN <<EOF
     )), warning = function(w) stop(w))" \
     -e "library(devtools)" \
     -e "devtools::install_github('DougLuke/UserNetR')"
+
+  Rscript -e "install.packages('remotes', repos='https://cloud.r-project.org')"
+  # coxed archived — last CRAN version 0.3.3 (2020-08-02)
+  Rscript -e "remotes::install_version('coxed', version='0.3.3', repos='https://cran.r-project.org', dependencies=TRUE)"
+  # rtweet archived — last CRAN version 2.0.0 (2024-02-24)
+  Rscript -e "remotes::install_version('rtweet', version='2.0.0', repos='https://cran.r-project.org', dependencies=TRUE)"
+
 EOF
 
 USER runner
