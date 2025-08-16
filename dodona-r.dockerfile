@@ -5,29 +5,17 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN <<'EOF'
   set -eux
   
-  # Detect the base suite (e.g., trixie, bookworm, sid)
   . /etc/os-release
   CODENAME="${VERSION_CODENAME:-trixie}"
   
-  # Tell apt to prefer the base suite and de-prefer unstable
-  printf 'APT::Default-Release "%s";\n' "$CODENAME" \
-    > /etc/apt/apt.conf.d/99defaultrelease
+  # Prefer the base suite by default
+  printf 'APT::Default-Release "%s";\n' "$CODENAME" > /etc/apt/apt.conf.d/99defaultrelease
   
-  cat > /etc/apt/preferences.d/00-pin <<PREF
-  Package: *
-  Pin: release n=${CODENAME}
-  Pin-Priority: 990
-  
-  Package: *
-  Pin: release a=unstable
-  Pin-Priority: 100
-PREF
-
   apt-get update
   
-  # Install build deps; let APT resolve matching runtimes from the same suite
-  # Note: correct package names for current Debian: libfontconfig1-dev, libfreetype6-dev
-  apt-get install -y --no-install-recommends \
+  # Install everything from unstable so *-dev matches already-installed runtimes
+  # (one shot avoids mixed versions)
+  apt-get install -y --no-install-recommends -t unstable \
     default-jdk \
     libcurl4-openssl-dev \
     libfontconfig1-dev \
