@@ -1,17 +1,27 @@
-FROM r-base:4.4.2
+FROM r-base:4.5.1
 
-RUN <<EOF
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN <<'EOF'
   set -eux
-
+  
+  . /etc/os-release
+  CODENAME="${VERSION_CODENAME:-trixie}"
+  
+  # Prefer the base suite by default
+  printf 'APT::Default-Release "%s";\n' "$CODENAME" > /etc/apt/apt.conf.d/99defaultrelease
+  
   apt-get update
-  apt-get install -y --no-install-recommends --allow-downgrades \
+  
+  # Install everything from unstable so *-dev matches already-installed runtimes
+  # (one shot avoids mixed versions)
+  apt-get install -y --no-install-recommends -t unstable \
     default-jdk \
     libcurl4-openssl-dev \
-    libfontconfig-dev \
-    libfreetype-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
     libfribidi-dev \
     libgit2-dev \
-    libglib2.0-0t64 \
     libglpk-dev \
     libgsl-dev \
     libharfbuzz-dev \
@@ -19,7 +29,7 @@ RUN <<EOF
     libssl-dev \
     libtiff5-dev \
     libxml2-dev
-
+  
   apt-get clean
   rm -rf /var/lib/apt/lists/*
 
@@ -52,7 +62,6 @@ RUN <<EOF
     , 'caret' \
     , 'clickstream' \
     , 'coin' \
-    , 'coxed' \
     , 'data.table' \
     , 'devtools' \
     , 'dplyr' \
@@ -91,7 +100,6 @@ RUN <<EOF
     , 'qdap' \
     , 'randomForest' \
     , 'reshape2' \
-    , 'rtweet' \
     , 'rvest' \
     , 'scales' \
     , 'scatterplot3d' \
@@ -119,6 +127,12 @@ RUN <<EOF
     )), warning = function(w) stop(w))" \
     -e "library(devtools)" \
     -e "devtools::install_github('DougLuke/UserNetR')"
+
+  Rscript -e "install.packages('remotes', repos='https://cloud.r-project.org')"
+  # coxed archived — last CRAN version 0.3.3 (2020-08-02)
+  Rscript -e "remotes::install_version('coxed', version='0.3.3', repos='https://cran.r-project.org', dependencies=TRUE)"
+  # rtweet archived — last CRAN version 2.0.0 (2024-02-24)
+  Rscript -e "remotes::install_version('rtweet', version='2.0.0', repos='https://cran.r-project.org', dependencies=TRUE)"
 EOF
 
 USER runner
