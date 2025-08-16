@@ -52,7 +52,6 @@ RUN <<EOF
     , 'caret' \
     , 'clickstream' \
     , 'coin' \
-    , 'coxed' \
     , 'data.table' \
     , 'devtools' \
     , 'dplyr' \
@@ -91,7 +90,6 @@ RUN <<EOF
     , 'qdap' \
     , 'randomForest' \
     , 'reshape2' \
-    , 'rtweet' \
     , 'rvest' \
     , 'scales' \
     , 'scatterplot3d' \
