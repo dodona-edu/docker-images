@@ -4,14 +4,13 @@ RUN <<EOF
   set -eux
 
   apt-get update
-  apt-get install -y --no-install-recommends --allow-downgrades \
+  apt-get install -y --no-install-recommends \
     default-jdk \
     libcurl4-openssl-dev \
     libfontconfig-dev \
     libfreetype-dev \
     libfribidi-dev \
     libgit2-dev \
-    libglib2.0-0t64 \
     libglpk-dev \
     libgsl-dev \
     libharfbuzz-dev \
