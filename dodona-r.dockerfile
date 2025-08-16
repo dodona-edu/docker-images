@@ -31,7 +31,8 @@ RUN <<EOF
   chown -R runner:runner /mnt
 
   Rscript -e "withCallingHandlers(install.packages(c( \
-    'AUC' \
+    'arules' \
+    , 'AUC' \
     , 'BART' \
     , 'BiocManager' \
     , 'GGally' \
