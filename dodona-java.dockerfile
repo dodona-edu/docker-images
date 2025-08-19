@@ -3,6 +3,7 @@ FROM openjdk:8
 # Install jq for json querying in bash
 RUN apt-get update \
  && apt-get install -y --no-install-recommends jshon=20131010-3+b1 \
+ && apt-get install -y --no-install-recommends jq\
  && rm -rf /var/lib/apt/lists/* \
  # Make sure the students can't find our secret path, which is mounted in
  # /mnt with a secure random name.
