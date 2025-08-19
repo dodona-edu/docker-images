@@ -1,18 +1,82 @@
 name: Publish
 
-on: [push]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: Force rebuild all images
+        type: boolean
+        default: false
 
 env:
-  AMD64_ONLY: '["assembly","compilers","java","r"]'
+  IMAGES: '["assembly","bash","c","compilers","csharp","docker","haskell","html","java","java21","nextflow","nodejs","postgres","prolog","python","r","scheme","sqlite","tested"]'
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.set-matrix.outputs.images }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            assembly:   'dodona-assembly.dockerfile'
+            bash:       'dodona-bash.dockerfile'
+            c:          'dodona-c.dockerfile'
+            compilers:  'dodona-compilers.dockerfile'
+            csharp:     'dodona-csharp.dockerfile'
+            docker:     'dodona-docker.dockerfile'
+            haskell:    'dodona-haskell.dockerfile'
+            html:       'dodona-html.dockerfile'
+            java:       'dodona-java.dockerfile'
+            java21:     'dodona-java21.dockerfile'
+            nextflow:   'dodona-nextflow.dockerfile'
+            nodejs:     'dodona-nodejs.dockerfile'
+            postgres:   'dodona-postgres.dockerfile'
+            prolog:     'dodona-prolog.dockerfile'
+            python:     'dodona-python.dockerfile'
+            r:          'dodona-r.dockerfile'
+            scheme:     'dodona-scheme.dockerfile'
+            sqlite:     'dodona-sqlite.dockerfile'
+            tested:     'dodona-tested.dockerfile'
+
+      - uses: actions/github-script@v7
+        id: flags
+        with:
+          script: |
+            const labels = (context.payload.pull_request?.labels || []).map(l => l.name);
+            core.setOutput('rebuild_all', labels.includes('rebuild-all') ? 'true' : 'false');
+            - id: set-matrix
+      - uses: actions/github-script@v7
+        id: set-matrix
+        env:
+          ALL_IMAGES: ${{ env.IMAGES }}
+          CHANGED: ${{ steps.filter.outputs.changes }}
+          FORCE_ALL: ${{ github.event.inputs.force_all || 'false' }}
+          REBUILD_ALL: ${{ steps.flags.outputs.rebuild_all }}
+        with:
+          script: |
+            const all = JSON.parse(process.env.ALL_IMAGES);
+            const changed = JSON.parse(process.env.CHANGED || '[]');
+            const forceAll = process.env.FORCE_ALL === 'true' || process.env.REBUILD_ALL === 'true';
+            const selected = forceAll ? all : all.filter(i => changed.includes(i));
+            core.setOutput('images', JSON.stringify(selected));
+
   build:
+    needs: detect
+    if: ${{ fromJson(needs.detect.outputs.images).length > 0 }}
+    runs-on: ubuntu-latest
     name: ${{ matrix.image }}
     strategy:
       fail-fast: false
       matrix:
-        image: [assembly, bash, c, compilers, csharp, docker, haskell, html, java, java21, nextflow, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
-    runs-on: ubuntu-latest
+        image: ${{ fromJson(needs.detect.outputs.images) }}
+
     steps:
     - uses: actions/checkout@v5
 
@@ -54,7 +118,6 @@ jobs:
         context: .
         file: dodona-${{ matrix.image }}.dockerfile
         push: true
-        # platforms: ${{ contains(fromJson(env.AMD64_ONLY), matrix.image) && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
         platforms: 'linux/amd64'
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
