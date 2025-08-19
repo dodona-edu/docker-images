@@ -23,7 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: dorny/paths-filter@v3
+      - name: Detect changed images
+        uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
@@ -47,14 +48,16 @@ jobs:
             sqlite:     'dodona-sqlite.dockerfile'
             tested:     'dodona-tested.dockerfile'
 
-      - uses: actions/github-script@v7
+      - name: Set flags
+        uses: actions/github-script@v7
         id: flags
         with:
           script: |
             const labels = (context.payload.pull_request?.labels || []).map(l => l.name);
             core.setOutput('rebuild_all', labels.includes('rebuild-all') ? 'true' : 'false');
 
-      - uses: actions/github-script@v7
+      - name: Set matrix
+        uses: actions/github-script@v7
         id: set-matrix
         env:
           ALL_IMAGES: ${{ env.IMAGES }}
