@@ -31,7 +31,7 @@ RUN  <<EOF
   ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest
 EOF
 
-# As the runner user
+# Switch to runner user
 USER runner
 RUN mkdir /home/runner/workdir
 WORKDIR /home/runner/workdir

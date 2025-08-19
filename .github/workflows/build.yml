@@ -1,23 +1,84 @@
 name: Publish
 
-on: [push]
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: Force rebuild all images
+        type: boolean
+        default: false
 
 env:
-  AMD64_ONLY: '["assembly","compilers","java","r"]'
+  IMAGES: '["assembly","bash","c","compilers","csharp","docker","haskell","html","java","java21","nextflow","nodejs","postgres","prolog","python","r","scheme","sqlite","tested"]'
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.set-matrix.outputs.images }}
+      has_images: ${{ steps.set-matrix.outputs.has_images }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build filters
+        id: genfilters
+        uses: actions/github-script@v7
+        env:
+          IMAGES: ${{ env.IMAGES }}
+        with:
+          script: |
+            const imgs = JSON.parse(process.env.IMAGES);
+            const map = Object.fromEntries(imgs.map(i => [i, `dodona-${i}.dockerfile`]));
+            core.setOutput('filters', JSON.stringify(map));
+
+      - name: Detect changed images
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: ${{ steps.genfilters.outputs.filters }}
+
+      - name: Set flags
+        uses: actions/github-script@v7
+        id: flags
+        with:
+          script: |
+            const labels = (context.payload.pull_request?.labels || []).map(l => l.name);
+            core.setOutput('rebuild_all', labels.includes('rebuild-all') ? 'true' : 'false');
+
+      - name: Set matrix
+        uses: actions/github-script@v7
+        id: set-matrix
+        env:
+          ALL_IMAGES: ${{ env.IMAGES }}
+          CHANGED: ${{ steps.filter.outputs.changes }}
+          FORCE_ALL: ${{ github.event.inputs.force_all || 'false' }}
+          REBUILD_ALL: ${{ steps.flags.outputs.rebuild_all }}
+        with:
+          script: |
+            const all = JSON.parse(process.env.ALL_IMAGES);
+            const changed = JSON.parse(process.env.CHANGED || '[]');
+            const forceAll = process.env.FORCE_ALL === 'true' || process.env.REBUILD_ALL === 'true';
+            const selected = forceAll ? all : all.filter(i => changed.includes(i));
+            core.setOutput('images', JSON.stringify(selected));
+            core.setOutput('has_images', selected.length > 0 ? 'true' : 'false');
+            console.log('Selected images:', selected);
+
   build:
+    needs: detect
+    if: ${{ needs.detect.outputs.has_images == 'true' }}
+    runs-on: ubuntu-latest
     name: ${{ matrix.image }}
     strategy:
       fail-fast: false
       matrix:
-        image: [assembly, bash, c, compilers, csharp, docker, haskell, html, java, java21, nextflow, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
-    runs-on: ubuntu-latest
+        image: ${{ fromJson(needs.detect.outputs.images) }}
+
     steps:
     - uses: actions/checkout@v5
-
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -43,9 +104,9 @@ jobs:
         images: |
           docker.io/dodona/dodona-${{ matrix.image }}
           ghcr.io/${{ github.repository_owner }}/dodona-${{ matrix.image }}
-        # Branch tags, PR tags, and a short-SHA tag
         tags: |
           type=ref,event=branch
+          type=ref,event=pr
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build and push (Docker Hub + GHCR)
@@ -54,7 +115,6 @@ jobs:
         context: .
         file: dodona-${{ matrix.image }}.dockerfile
         push: true
-        # platforms: ${{ contains(fromJson(env.AMD64_ONLY), matrix.image) && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
         platforms: 'linux/amd64'
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
