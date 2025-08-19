@@ -24,30 +24,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Build filters
+        id: genfilters
+        uses: actions/github-script@v7
+        env:
+          IMAGES: ${{ env.IMAGES }}
+        with:
+          script: |
+            const imgs = JSON.parse(process.env.IMAGES);
+            const map = Object.fromEntries(imgs.map(i => [i, `dodona-${i}.dockerfile`]));
+            core.setOutput('filters', JSON.stringify(map));
+
       - name: Detect changed images
         uses: dorny/paths-filter@v3
         id: filter
         with:
-          filters: |
-            assembly:   'dodona-assembly.dockerfile'
-            bash:       'dodona-bash.dockerfile'
-            c:          'dodona-c.dockerfile'
-            compilers:  'dodona-compilers.dockerfile'
-            csharp:     'dodona-csharp.dockerfile'
-            docker:     'dodona-docker.dockerfile'
-            haskell:    'dodona-haskell.dockerfile'
-            html:       'dodona-html.dockerfile'
-            java:       'dodona-java.dockerfile'
-            java21:     'dodona-java21.dockerfile'
-            nextflow:   'dodona-nextflow.dockerfile'
-            nodejs:     'dodona-nodejs.dockerfile'
-            postgres:   'dodona-postgres.dockerfile'
-            prolog:     'dodona-prolog.dockerfile'
-            python:     'dodona-python.dockerfile'
-            r:          'dodona-r.dockerfile'
-            scheme:     'dodona-scheme.dockerfile'
-            sqlite:     'dodona-sqlite.dockerfile'
-            tested:     'dodona-tested.dockerfile'
+          filters: ${{ steps.genfilters.outputs.filters }}
 
       - name: Set flags
         uses: actions/github-script@v7
