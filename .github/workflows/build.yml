@@ -53,7 +53,7 @@ jobs:
           script: |
             const labels = (context.payload.pull_request?.labels || []).map(l => l.name);
             core.setOutput('rebuild_all', labels.includes('rebuild-all') ? 'true' : 'false');
-            - id: set-matrix
+
       - uses: actions/github-script@v7
         id: set-matrix
         env:
