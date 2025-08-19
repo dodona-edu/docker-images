@@ -112,9 +112,9 @@ jobs:
         images: |
           docker.io/dodona/dodona-${{ matrix.image }}
           ghcr.io/${{ github.repository_owner }}/dodona-${{ matrix.image }}
-        # Branch tags, PR tags, and a short-SHA tag
         tags: |
           type=ref,event=branch
+          type=ref,event=pr
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build and push (Docker Hub + GHCR)
