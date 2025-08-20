@@ -13,7 +13,7 @@ on:
         default: false
 
 env:
-  IMAGES: '["assembly","bash","c","compilers","csharp","docker","haskell","html","java","java21","nextflow","nodejs","postgres","prolog","python","r","scheme","sqlite","tested"]'
+  IMAGES: '["assembly","bash","c","compilers","csharp","docker","haskell","html","java21","nextflow","nodejs","postgres","prolog","python","r","scheme","sqlite","tested"]'
 
 jobs:
   detect:
