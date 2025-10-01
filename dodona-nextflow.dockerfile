@@ -1,4 +1,4 @@
-FROM amazoncorretto:21-al2023-headless
+FROM amazoncorretto:25-al2023-headless
 ARG NXF_VER=24.10.2
 ARG FASTQC_VER=0.11.9
 ARG MULTIQC_VER=1.25.2
