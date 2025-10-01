@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:25-jdk-alpine
 
 # Install jq for json querying in bash
 RUN apk add --no-cache jq=1.8.0-r0 \
