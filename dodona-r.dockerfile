@@ -80,6 +80,7 @@ RUN <<'EOF'
     , 'gridBase' \
     , 'gridGraphics' \
     , 'gridExtra' \
+    , 'httr' \
     , 'httr2' \
     , 'igraph' \
     , 'iml' \
