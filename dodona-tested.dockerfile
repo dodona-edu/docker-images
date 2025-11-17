@@ -24,6 +24,7 @@ ENV PATH $HASKELL_DIR/cabal:$PATH
 ENV NODE_PATH /usr/lib/node_modules
 
 # Install dependencies
+# hadolint ignore=DL3013,DL3016
 RUN <<EOF
     # Update apt-get
     apt-get update
@@ -117,6 +118,10 @@ RUN <<EOF
     useradd -m runner
     mkdir /home/runner/workdir
     chown -R runner:runner /home/runner/workdir
+
+    # Exercise dependencies
+    pip install --no-cache-dir --upgrade \
+      numpy==2.3.5
 EOF
 
 USER runner
