@@ -109,19 +109,22 @@ RUN <<EOF
     # Java specific dependencies
     apt-get install -y --no-install-recommends checkstyle
 
-    # Clean up apt caches
+    # Exercise dependencies
+    pip install --no-cache-dir --upgrade \
+      numpy==2.3.5
+
+    # Clean up caches
     apt-get clean
     rm -rf /var/lib/apt/lists/*
+    rm -rf /root/.cache
+    rm -rf /root/.npm
+    rm -rf /usr/local/sdkman/tmp
 
     # Setup permissions and user
     chmod 711 /mnt
     useradd -m runner
     mkdir /home/runner/workdir
     chown -R runner:runner /home/runner/workdir
-
-    # Exercise dependencies
-    pip install --no-cache-dir --upgrade \
-      numpy==2.3.5
 EOF
 
 USER runner
