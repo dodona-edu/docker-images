@@ -24,7 +24,6 @@ ENV PATH $HASKELL_DIR/cabal:$PATH
 ENV NODE_PATH /usr/lib/node_modules
 
 # Install dependencies
-# hadolint ignore=DL3013,DL3016
 RUN <<EOF
     # Update apt-get
     apt-get update
@@ -109,16 +108,9 @@ RUN <<EOF
     # Java specific dependencies
     apt-get install -y --no-install-recommends checkstyle
 
-    # Exercise dependencies
-    pip install --no-cache-dir --upgrade \
-      numpy==2.3.5
-
-    # Clean up caches
+    # Clean up apt caches
     apt-get clean
     rm -rf /var/lib/apt/lists/*
-    rm -rf /root/.cache
-    rm -rf /root/.npm
-    rm -rf /usr/local/sdkman/tmp
 
     # Setup permissions and user
     chmod 711 /mnt
