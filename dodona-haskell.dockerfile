@@ -1,4 +1,4 @@
-FROM haskell:9.8.2
+FROM haskell:9.14.1
 
 
 
