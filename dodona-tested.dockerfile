@@ -111,7 +111,7 @@ RUN <<EOF
 
     # Exercise dependencies
     pip install --no-cache-dir --upgrade \
-      numpy==2.3.5
+      numpy==2.4.0 pandas==3.0.1 matplotlib=3.10.8
 
     # Clean up caches
     apt-get clean

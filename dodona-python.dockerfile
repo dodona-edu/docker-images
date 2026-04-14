@@ -29,7 +29,7 @@ RUN <<EOF
     typing-inspect==0.9.0
 
   # Exercise dependencies
-  pip install --no-cache-dir --upgrade numpy==1.26.0 biopython==1.81 sortedcontainers==2.4.0 pandas==2.1.1
+  pip install --no-cache-dir --upgrade numpy==1.26.0 biopython==1.81 sortedcontainers==2.4.0 pandas==2.3.0 matplotlib==3.10.8
   fc-cache -f
 
   rm -rf /var/lib/apt/lists/*
