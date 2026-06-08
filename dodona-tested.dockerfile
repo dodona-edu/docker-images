@@ -13,15 +13,15 @@ FROM python:3.12.4-slim-bullseye
 # Set up the environment
 
 # Kotlin
-ENV SDKMAN_DIR /usr/local/sdkman
-ENV PATH $SDKMAN_DIR/candidates/kotlin/current/bin:$PATH
-ENV PATH $SDKMAN_DIR/candidates/java/current/bin:$PATH
+ENV SDKMAN_DIR=/usr/local/sdkman
+ENV PATH=$SDKMAN_DIR/candidates/kotlin/current/bin:$PATH
+ENV PATH=$SDKMAN_DIR/candidates/java/current/bin:$PATH
 # Haskell
-ENV HASKELL_DIR /usr/local/ghcupdir
-ENV PATH $HASKELL_DIR/ghc/bin:$PATH
-ENV PATH $HASKELL_DIR/cabal:$PATH
+ENV HASKELL_DIR=/usr/local/ghcupdir
+ENV PATH=$HASKELL_DIR/ghc/bin:$PATH
+ENV PATH=$HASKELL_DIR/cabal:$PATH
 # Node
-ENV NODE_PATH /usr/lib/node_modules
+ENV NODE_PATH=/usr/lib/node_modules
 
 # Install dependencies
 # hadolint ignore=DL3013,DL3016
@@ -111,9 +111,10 @@ RUN <<EOF
 
     # Exercise dependencies
     pip install --no-cache-dir --upgrade \
-      numpy==2.3.5 \
-      pandas==3.0.1 \
-      openpyxl==3.1.5
+      numpy==2.4.6 \
+      pandas==3.0.3 \
+      openpyxl==3.1.5 \
+      matplotlib==3.10.9
 
     # Clean up caches
     apt-get clean
