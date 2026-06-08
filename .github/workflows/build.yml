@@ -26,7 +26,7 @@ jobs:
 
       - name: Build filters
         id: genfilters
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           IMAGES: ${{ env.IMAGES }}
         with:
@@ -36,13 +36,13 @@ jobs:
             core.setOutput('filters', JSON.stringify(map));
 
       - name: Detect changed images
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: ${{ steps.genfilters.outputs.filters }}
 
       - name: Set flags
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         id: flags
         with:
           script: |
@@ -50,7 +50,7 @@ jobs:
             core.setOutput('rebuild_all', labels.includes('rebuild-all') ? 'true' : 'false');
 
       - name: Set matrix
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         id: set-matrix
         env:
           ALL_IMAGES: ${{ env.IMAGES }}
