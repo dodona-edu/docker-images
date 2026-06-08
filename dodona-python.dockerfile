@@ -15,21 +15,21 @@ RUN <<EOF
 
   # Judge dependencies
   pip install --no-cache-dir --upgrade \
-    Pillow==12.2.0 \
-    cairosvg==2.9.0 \
-    jsonschema==4.26.0 \
-    mako==1.3.12 \
-    psutil==7.2.2 \
-    pydantic==2.13.4 \
+    Pillow==10.0.1 \
+    cairosvg==2.7.1 \
+    jsonschema==4.19.1 \
+    mako==1.2.4 \
+    psutil==5.9.5 \
+    pydantic==2.4.2 \
     pyhumps==3.8.0 \
-    pylint==4.0.5 \
-    pyshp==3.0.9 \
-    setuptools==82.0.1 \
-    svg-turtle==1.1.0 \
+    pylint==3.0.1 \
+    pyshp==2.3.1 \
+    setuptools==75.8.1 \
+    svg-turtle==0.4.2 \
     typing-inspect==0.9.0
 
   # Exercise dependencies
-  pip install --no-cache-dir --upgrade numpy==2.4.6 biopython==1.87 sortedcontainers==2.4.0 pandas==3.0.3 matplotlib==3.10.9
+  pip install --no-cache-dir --upgrade numpy==1.26.0 biopython==1.81 sortedcontainers==2.4.0 pandas==2.1.1
   fc-cache -f
 
   rm -rf /var/lib/apt/lists/*
