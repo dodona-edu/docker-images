@@ -26,7 +26,7 @@ jobs:
 
       - name: Build filters
         id: genfilters
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           IMAGES: ${{ env.IMAGES }}
         with:
@@ -42,7 +42,7 @@ jobs:
           filters: ${{ steps.genfilters.outputs.filters }}
 
       - name: Set flags
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         id: flags
         with:
           script: |
@@ -50,7 +50,7 @@ jobs:
             core.setOutput('rebuild_all', labels.includes('rebuild-all') ? 'true' : 'false');
 
       - name: Set matrix
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         id: set-matrix
         env:
           ALL_IMAGES: ${{ env.IMAGES }}
