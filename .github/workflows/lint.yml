@@ -11,7 +11,7 @@ jobs:
         image: [assembly, bash, c, compilers, csharp, docker, haskell, html, java21, nextflow, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: jbergstroem/hadolint-gh-action@v1
         with:
           dockerfile: dodona-${{ matrix.image }}.dockerfile
