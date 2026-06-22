@@ -22,7 +22,7 @@ jobs:
       images: ${{ steps.set-matrix.outputs.images }}
       has_images: ${{ steps.set-matrix.outputs.has_images }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build filters
         id: genfilters
@@ -78,7 +78,7 @@ jobs:
         image: ${{ fromJson(needs.detect.outputs.images) }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
