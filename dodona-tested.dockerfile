@@ -44,6 +44,7 @@ CFG
         procps \
         dos2unix \
         curl \
+        wget \
         zip \
         unzip
 
