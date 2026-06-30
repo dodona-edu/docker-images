@@ -1,4 +1,4 @@
-FROM python:3.13.2-slim-bookworm
+FROM python:3.13.7-slim-bookworm
 
 RUN <<EOF
   set -eux
