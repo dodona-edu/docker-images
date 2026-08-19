@@ -1,5 +1,7 @@
 FROM python:3.12.9-bookworm
 
+COPY dodona-python/ /requirements/
+
 RUN <<EOF
   set -eux
 
@@ -15,21 +17,12 @@ RUN <<EOF
 
   # Judge dependencies
   pip install --no-cache-dir --upgrade \
-    Pillow==12.2.0 \
-    cairosvg==2.9.0 \
-    jsonschema==4.26.0 \
-    mako==1.3.12 \
-    psutil==7.2.2 \
-    pydantic==2.13.4 \
-    pyhumps==3.8.0 \
-    pylint==4.0.5 \
-    pyshp==3.0.9 \
-    setuptools==82.0.1 \
-    svg-turtle==1.1.0 \
-    typing-inspect==0.9.0
+    -r /requirements/judge-pythia.txt \
+    -r /requirements/judge-turtle.txt \
+    -r /requirements/unclaimed.txt
 
   # Exercise dependencies
-  pip install --no-cache-dir --upgrade numpy==2.4.6 biopython==1.87 sortedcontainers==2.4.0 pandas==3.0.3 matplotlib==3.10.9 lxml==6.1.1
+  pip install --no-cache-dir --upgrade -r /requirements/exercises.txt
   fc-cache -f
 
   rm -rf /var/lib/apt/lists/*
