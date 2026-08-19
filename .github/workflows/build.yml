@@ -12,9 +12,6 @@ on:
         type: boolean
         default: false
 
-env:
-  IMAGES: '["assembly","bash","c","compilers","csharp","docker","haskell","html","java","nextflow","nodejs","postgres","prolog","python","r","scheme","sqlite","tested"]'
-
 jobs:
   detect:
     runs-on: ubuntu-latest
@@ -24,11 +21,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - id: images
+        run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
+
       - name: Build filters
         id: genfilters
         uses: actions/github-script@v9
         env:
-          IMAGES: ${{ env.IMAGES }}
+          IMAGES: ${{ steps.images.outputs.images }}
         with:
           script: |
             const imgs = JSON.parse(process.env.IMAGES);
@@ -53,7 +53,7 @@ jobs:
         uses: actions/github-script@v9
         id: set-matrix
         env:
-          ALL_IMAGES: ${{ env.IMAGES }}
+          ALL_IMAGES: ${{ steps.images.outputs.images }}
           CHANGED: ${{ steps.filter.outputs.changes }}
           FORCE_ALL: ${{ github.event.inputs.force_all || 'false' }}
           REBUILD_ALL: ${{ steps.flags.outputs.rebuild_all }}
