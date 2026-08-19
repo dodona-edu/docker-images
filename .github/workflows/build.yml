@@ -62,7 +62,15 @@ jobs:
             const all = JSON.parse(process.env.ALL_IMAGES);
             const changed = JSON.parse(process.env.CHANGED || '[]');
             const forceAll = process.env.FORCE_ALL === 'true' || process.env.REBUILD_ALL === 'true';
-            const selected = forceAll ? all : all.filter(i => changed.includes(i));
+            // promote.yml stages :next for these from the digest the pull request
+            // already tested, so a master rebuild would replace it with an untested one.
+            // Must list the same images as promote.yml's filter.
+            const promotedOnMerge = ['html'];
+            // force_all and the rebuild-all label stay an escape hatch and do rebuild them.
+            const selected = forceAll
+              ? all
+              : all.filter(i => changed.includes(i))
+                   .filter(i => context.eventName !== 'push' || !promotedOnMerge.includes(i));
             core.setOutput('images', JSON.stringify(selected));
             core.setOutput('has_images', selected.length > 0 ? 'true' : 'false');
             console.log('Selected images:', selected);
@@ -114,7 +122,7 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-  # Runs the consumer judge on the exact image built for this pull request.
+  # Runs the consumer judge on the exact candidate image promote.yml will stage.
   # TODO: point the ref at @main once judge-html#289 is merged.
   e2e-judge-html:
     needs: [detect, build]
