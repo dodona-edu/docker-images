@@ -231,17 +231,31 @@ jobs:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html:pr-${{ github.event.pull_request.number }}
 
   # Both judges run on the exact image built for this pull request.
-  # TODO: point the refs at @main once the judge spike pull requests are merged.
+  # judge-pythia is private, and a public repository cannot call a private one's
+  # reusable workflow, so this job checks the judge out with a read-only checkout
+  # key and runs its suite here.
   e2e-judge-pythia:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
     permissions:
       contents: read
       packages: read
-    uses: dodona-edu/judge-pythia/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
-    with:
+    runs-on: ubuntu-latest
+    container:
       image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
+      options: --user root
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: dodona-edu/judge-pythia
+          ref: master
+          ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+      - name: Save the new output
+        run: .github/workflows/integration-tests . integration-tests integration-tests/generated
+      - name: Compare original and new output
+        run: diff -r integration-tests/expected integration-tests/generated
 
+  # TODO: point the ref at @main once judge-turtle#111 is merged.
   e2e-judge-turtle:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
