@@ -121,16 +121,6 @@ jobs:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.detect.outputs.html_next }}
 
   # TODO: point the refs at @main once the judge spike pull requests are merged.
-  e2e-judge-pythia:
-    needs: detect
-    if: ${{ !inputs.dry_run && needs.detect.outputs.python_next != '' }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-pythia/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
-
   e2e-judge-turtle:
     needs: detect
     if: ${{ !inputs.dry_run && needs.detect.outputs.python_next != '' }}
@@ -142,7 +132,7 @@ jobs:
       image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
 
   publish:
-    needs: [detect, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
+    needs: [detect, e2e-judge-html, e2e-judge-turtle]
     # A red gate holds back its own image only.
     # A dry run stops here, it only reports what is pending.
     if: ${{ !cancelled() && !inputs.dry_run && needs.detect.outputs.pending != '[]' }}
@@ -163,7 +153,6 @@ jobs:
         env:
           PENDING: ${{ needs.detect.outputs.pending }}
           HTML_GATE: ${{ needs.e2e-judge-html.result }}
-          PYTHIA_GATE: ${{ needs.e2e-judge-pythia.result }}
           TURTLE_GATE: ${{ needs.e2e-judge-turtle.result }}
           OWNER: ${{ github.repository_owner }}
         with:
@@ -172,7 +161,7 @@ jobs:
 
             const gates = {
               html: { 'judge-html': process.env.HTML_GATE },
-              python: { 'judge-pythia': process.env.PYTHIA_GATE, 'judge-turtle': process.env.TURTLE_GATE },
+              python: { 'judge-turtle': process.env.TURTLE_GATE },
             };
 
             const summary = (line) => core.summary.addRaw(`${line}\n`).write();

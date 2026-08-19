@@ -136,16 +136,6 @@ jobs:
 
   # Both judges run on the exact candidate image promote.yml will stage.
   # TODO: point the refs at @main once the judge spike pull requests are merged.
-  e2e-judge-pythia:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-pythia/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
-
   e2e-judge-turtle:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
