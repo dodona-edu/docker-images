@@ -26,19 +26,33 @@ jobs:
             html:
               - dodona-html.dockerfile
               - dodona-html/**
+            python:
+              - dodona-python.dockerfile
+              - dodona-python/**
 
       - name: Log in to GHCR
-        if: ${{ steps.filter.outputs.html == 'true' }}
+        if: ${{ steps.filter.outputs.html == 'true' || steps.filter.outputs.python == 'true' }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Promote the tested candidate to next
+      - name: Promote the tested html candidate to next
         if: ${{ steps.filter.outputs.html == 'true' }}
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-html
+          CANDIDATE: pr-${{ github.event.pull_request.number }}
+        run: |
+          # {{.Manifest.Digest}} silently renders the whole output, not the digest.
+          digest="$(docker buildx imagetools inspect "$IMAGE:$CANDIDATE" --format '{{json .Manifest}}' | jq -r '.digest')"
+          echo "Promoting $IMAGE:$CANDIDATE ($digest) to $IMAGE:next"
+          docker buildx imagetools create -t "$IMAGE:next" "$IMAGE@$digest"
+
+      - name: Promote the tested python candidate to next
+        if: ${{ steps.filter.outputs.python == 'true' }}
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-python
           CANDIDATE: pr-${{ github.event.pull_request.number }}
         run: |
           # {{.Manifest.Digest}} silently renders the whole output, not the digest.

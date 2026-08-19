@@ -65,7 +65,7 @@ jobs:
             // promote.yml stages :next for these from the digest the pull request
             // already tested, so a master rebuild would replace it with an untested one.
             // Must list the same images as promote.yml's filter.
-            const promotedOnMerge = ['html'];
+            const promotedOnMerge = ['html', 'python'];
             // force_all and the rebuild-all label stay an escape hatch and do rebuild them.
             const selected = forceAll
               ? all
