@@ -1,4 +1,4 @@
-name: Publish
+name: Build
 
 on:
   push:
@@ -90,6 +90,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    # A build on master stages to :next, publish.yml moves it to :latest.
     - name: Set docker tags
       id: meta
       uses: docker/metadata-action@v6
@@ -99,7 +100,7 @@ jobs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
-          type=raw,value=latest,enable={{is_default_branch}}
+          type=raw,value=next,enable={{is_default_branch}}
 
     - name: Build and push (GHCR)
       uses: docker/build-push-action@v7
