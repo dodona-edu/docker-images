@@ -1,0 +1,116 @@
+name: Publish
+
+# Moves :next to :latest, the tag the workers pull. :previous keeps the digest
+# :latest pointed at before this run, so rolling back is retagging it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      images:
+        description: Images to publish, space or comma separated (empty publishes everything pending)
+        type: string
+        required: false
+        default: ''
+      dry_run:
+        description: Only report what would be published
+        type: boolean
+        default: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: images
+        run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move next to latest
+        uses: actions/github-script@v9
+        env:
+          ALL_IMAGES: ${{ steps.images.outputs.images }}
+          REQUESTED: ${{ inputs.images }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          OWNER: ${{ github.repository_owner }}
+        with:
+          script: |
+            const all = JSON.parse(process.env.ALL_IMAGES);
+            const requested = (process.env.REQUESTED || '').split(/[\s,]+/).filter(Boolean);
+            for (const image of requested) {
+              if (!all.includes(image)) {
+                core.setFailed(`Unknown image: ${image}`);
+                return;
+              }
+            }
+            const selected = requested.length > 0 ? requested : all;
+            const dryRun = process.env.DRY_RUN === 'true';
+
+            // {{.Manifest.Digest}} silently renders the whole output, not the digest.
+            const digestOf = async (ref) => {
+              const inspected = await exec.getExecOutput(
+                'docker',
+                ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Manifest}}'],
+                { ignoreReturnCode: true, silent: true }
+              );
+              return inspected.exitCode === 0 ? JSON.parse(inspected.stdout).digest : '';
+            };
+
+            const resolved = await Promise.all(selected.map(async (image) => {
+              const repository = `ghcr.io/${process.env.OWNER}/dodona-${image}`;
+              const next = await digestOf(`${repository}:next`);
+              const current = next ? await digestOf(`${repository}:latest`) : '';
+              return { image, repository, next, current };
+            }));
+
+            const summary = (line) => core.summary.addRaw(`${line}\n`).write();
+
+            await summary('## Publish');
+            await summary('');
+            await summary('| image | :latest |');
+            await summary('| --- | --- |');
+
+            let pending = 0;
+            for (const { image, repository, next, current } of resolved) {
+              // No :next tag at all is nothing pending, not a failure.
+              if (!next) {
+                console.log(`${image}: no :next tag`);
+                await summary(`| \`${image}\` | nothing pending, no \`:next\` |`);
+                continue;
+              }
+
+              if (next === current) {
+                console.log(`${image}: :next is already :latest (${next})`);
+                await summary(`| \`${image}\` | nothing pending, \`:next\` is already published |`);
+                continue;
+              }
+
+              pending += 1;
+              console.log(`${image}: ${current || 'none'} -> ${next}`);
+              const from = current ? `\`${current}\`` : 'nothing';
+
+              if (dryRun) {
+                await summary(`| \`${image}\` | would move to \`${next}\` from ${from} |`);
+                continue;
+              }
+
+              if (current) {
+                await exec.exec('docker', ['buildx', 'imagetools', 'create', '-t', `${repository}:previous`, `${repository}@${current}`]);
+              }
+              await exec.exec('docker', ['buildx', 'imagetools', 'create', '-t', `${repository}:latest`, `${repository}@${next}`]);
+              await summary(`| \`${image}\` | moved to \`${next}\` from ${from} |`);
+            }
+
+            await summary('');
+            await summary(dryRun
+              ? `Dry run: ${pending} image(s) pending, nothing was retagged.`
+              : `Published ${pending} image(s).`);
