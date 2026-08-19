@@ -26,6 +26,7 @@ jobs:
     outputs:
       pending: ${{ steps.resolve.outputs.pending }}
       html_next: ${{ steps.resolve.outputs.html_next }}
+      python_next: ${{ steps.resolve.outputs.python_next }}
     steps:
       - uses: actions/checkout@v7
 
@@ -105,6 +106,7 @@ jobs:
 
             core.setOutput('pending', JSON.stringify(pending));
             core.setOutput('html_next', pending.find(p => p.image === 'html')?.next || '');
+            core.setOutput('python_next', pending.find(p => p.image === 'python')?.next || '');
 
   # Runs the consumer judge on the digest about to be published, not a rebuild of it.
   # TODO: point the ref at @main once judge-html#289 is merged.
@@ -118,9 +120,30 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.detect.outputs.html_next }}
 
+  # TODO: point the refs at @main once the judge spike pull requests are merged.
+  e2e-judge-pythia:
+    needs: detect
+    if: ${{ !inputs.dry_run && needs.detect.outputs.python_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-pythia/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
+
+  e2e-judge-turtle:
+    needs: detect
+    if: ${{ !inputs.dry_run && needs.detect.outputs.python_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
+
   publish:
-    needs: [detect, e2e-judge-html]
-    # The gate holds back html alone, the rest of the dispatch still publishes.
+    needs: [detect, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
+    # A red gate holds back its own image only.
     # A dry run stops here, it only reports what is pending.
     if: ${{ !cancelled() && !inputs.dry_run && needs.detect.outputs.pending != '[]' }}
     runs-on: ubuntu-latest
@@ -140,11 +163,17 @@ jobs:
         env:
           PENDING: ${{ needs.detect.outputs.pending }}
           HTML_GATE: ${{ needs.e2e-judge-html.result }}
+          PYTHIA_GATE: ${{ needs.e2e-judge-pythia.result }}
+          TURTLE_GATE: ${{ needs.e2e-judge-turtle.result }}
           OWNER: ${{ github.repository_owner }}
         with:
           script: |
             const pending = JSON.parse(process.env.PENDING);
-            const htmlGate = process.env.HTML_GATE;
+
+            const gates = {
+              html: { 'judge-html': process.env.HTML_GATE },
+              python: { 'judge-pythia': process.env.PYTHIA_GATE, 'judge-turtle': process.env.TURTLE_GATE },
+            };
 
             const summary = (line) => core.summary.addRaw(`${line}\n`).write();
 
@@ -157,9 +186,12 @@ jobs:
             for (const { image, next, current } of pending) {
               const repository = `ghcr.io/${process.env.OWNER}/dodona-${image}`;
 
-              if (image === 'html' && htmlGate !== 'success') {
-                core.warning(`Not publishing html, the consumer E2E on ${next} did not pass (${htmlGate})`);
-                await summary(`| \`html\` | held back, the consumer E2E on \`${next}\` did not pass |`);
+              const failed = Object.entries(gates[image] || {})
+                .filter(([, result]) => result !== 'success')
+                .map(([judge]) => judge);
+              if (failed.length > 0) {
+                core.warning(`Not publishing ${image}, the E2E on ${next} did not pass for ${failed.join(', ')}`);
+                await summary(`| \`${image}\` | held back, the E2E on \`${next}\` did not pass for ${failed.join(', ')} |`);
                 continue;
               }
 
