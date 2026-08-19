@@ -16,6 +16,12 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: publish-images
+  # Cancelling would abandon a run midway through retagging, leaving :latest and
+  # :previous inconsistent.
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -48,11 +54,11 @@ jobs:
             const requested = (process.env.REQUESTED || '').split(/[\s,]+/).filter(Boolean);
             for (const image of requested) {
               if (!all.includes(image)) {
-                core.setFailed(`Unknown image: ${image}`);
+                core.setFailed(`Unknown image: ${image} (valid: ${all.join(', ')})`);
                 return;
               }
             }
-            const selected = requested.length > 0 ? requested : all;
+            const selected = [...new Set(requested.length > 0 ? requested : all)];
             const dryRun = process.env.DRY_RUN === 'true';
 
             // {{.Manifest.Digest}} silently renders the whole output, not the digest.
