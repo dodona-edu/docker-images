@@ -30,6 +30,7 @@ jobs:
       actions: read
     outputs:
       pending: ${{ steps.resolve.outputs.pending }}
+      html_next: ${{ steps.resolve.outputs.html_next }}
     steps:
       # A dev build in flight is about to replace :next, so the digests resolved
       # below would certify an image the merge will not ship. Every merge to dev
@@ -189,6 +190,20 @@ jobs:
             }
 
             core.setOutput('pending', JSON.stringify(pending));
+            core.setOutput('html_next', pending.find(p => p.image === 'html')?.next || '');
+
+  # Runs the consumer judge on the digest merging would publish, not on a rebuild
+  # of it. The retag needs no link to this: a red check blocks the merge.
+  # TODO: point the ref at @main once judge-html#289 is merged.
+  e2e-judge-html:
+    needs: detect
+    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.html_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.detect.outputs.html_next }}
 
   publish:
     needs: detect
