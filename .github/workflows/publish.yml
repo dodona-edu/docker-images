@@ -25,6 +25,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Dispatching waits for an approval on this environment before anything is
+    # retagged. A dry run only reports, so it skips the gate.
+    environment: ${{ !inputs.dry_run && 'publish' || '' }}
     permissions:
       contents: read
       packages: write
