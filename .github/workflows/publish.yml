@@ -31,6 +31,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      deployments: write
     steps:
       - uses: actions/checkout@v7
 
@@ -72,6 +73,42 @@ jobs:
                 { ignoreReturnCode: true, silent: true }
               );
               return inspected.exitCode === 0 ? JSON.parse(inspected.stdout).digest : '';
+            };
+
+            // metadata-action stamps the commit into the image. Reading it back keeps the
+            // record pointed at what was built, even when master moved on since the build.
+            const revisionOf = async (ref) => {
+              const inspected = await exec.getExecOutput(
+                'docker',
+                ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Image.Config.Labels}}'],
+                { ignoreReturnCode: true, silent: true }
+              );
+              if (inspected.exitCode !== 0) return '';
+              return JSON.parse(inspected.stdout || 'null')?.['org.opencontainers.image.revision'] || '';
+            };
+
+            // A deployment per image, so /deployments and the Environments sidebar show
+            // which digest every worker is on.
+            const record = async (image, repository, next, current) => {
+              const deployment = await github.rest.repos.createDeployment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: (await revisionOf(`${repository}@${next}`)) || context.sha,
+                environment: `workers/${image}`,
+                auto_merge: false,
+                // Commit statuses gate the build, they have nothing to say about a retag.
+                required_contexts: [],
+                payload: { digest: next, previous: current },
+                description: `dodona-${image} ${next}`,
+                transient_environment: false,
+                production_environment: true,
+              });
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.data.id,
+                state: 'success',
+              });
             };
 
             const resolved = await Promise.all(selected.map(async (image) => {
@@ -116,6 +153,15 @@ jobs:
                 await exec.exec('docker', ['buildx', 'imagetools', 'create', '-t', `${repository}:previous`, `${repository}@${current}`]);
               }
               await exec.exec('docker', ['buildx', 'imagetools', 'create', '-t', `${repository}:latest`, `${repository}@${next}`]);
+
+              // The retag already happened, so a failed record is bookkeeping to redo by
+              // hand, not a reason to hold back the images still in the loop.
+              try {
+                await record(image, repository, next, current);
+              } catch (error) {
+                core.warning(`Published ${image}, but recording the deployment failed: ${error.message}`);
+              }
+
               await summary(`| \`${image}\` | moved to \`${next}\` from ${from} |`);
             }
 
