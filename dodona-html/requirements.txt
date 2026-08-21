@@ -1,4 +1,4 @@
-# Source of truth for the Python dependencies the dodona-html image ships.
+# Source of truth for the Python dependencies pinned into the dodona-html image.
 # dodona-edu/judge-html carries a copy of this list in its own
 # requirements.txt, and its CI checks that copy against the image.
 beautifulsoup4==4.13.3
