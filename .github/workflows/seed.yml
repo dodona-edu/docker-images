@@ -1,0 +1,151 @@
+name: Seed
+
+# After the dev/master flow's bootstrap rebuilds the whole fleet, :next holds
+# fresh rebuilds even for images nobody changed. This workflow makes
+# "pending = changed" true again: for every image whose sources are
+# unchanged relative to what :latest was built from, it points :next at
+# :latest's digest, so the publish manifest only shows genuinely changed
+# images as pending.
+#
+# Classification mirrors build.yml's "Detect stale images" step: the same
+# org.opencontainers.image.revision label, the same git rev-list technique,
+# but checked against :latest instead of :next. Keep the two in sync if
+# either changes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Actually retag :next to :latest; without this the run only reports
+        type: boolean
+        default: false
+  # Live verification: any PR touching this file runs Seed in report-only
+  # mode, since `apply` is only defined on workflow_dispatch.
+  pull_request:
+    paths: [ ".github/workflows/seed.yml" ]
+
+jobs:
+  seed:
+    # PR runs are always report-only (see above), so they may run from any
+    # branch; an apply run may only happen from dev.
+    if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/dev' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Staleness reads history back to the commit :latest was built from.
+          fetch-depth: 0
+
+      - id: images
+        run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Seed unchanged images
+        id: seed
+        uses: actions/github-script@v9
+        env:
+          ALL_IMAGES: ${{ steps.images.outputs.images }}
+          OWNER: ${{ github.repository_owner }}
+          APPLY: ${{ github.event.inputs.apply || 'false' }}
+        with:
+          script: |
+            const all = JSON.parse(process.env.ALL_IMAGES);
+            const owner = process.env.OWNER;
+            const apply = process.env.APPLY === 'true';
+
+            const run = (command, args) =>
+              exec.getExecOutput(command, args, { ignoreReturnCode: true, silent: true });
+
+            // {{json .Image}} carries the config, and with it the labels the
+            // build stamped. Same call as build.yml's "Detect stale images".
+            const revisionOf = async (ref) => {
+              const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Image}}']);
+              if (inspected.exitCode !== 0) {
+                return '';
+              }
+              try {
+                return JSON.parse(inspected.stdout).config?.Labels?.['org.opencontainers.image.revision'] || '';
+              } catch {
+                return '';
+              }
+            };
+
+            const digestOf = async (ref) => {
+              const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{.Manifest.Digest}}']);
+              return inspected.exitCode === 0 ? inspected.stdout.trim() : '';
+            };
+
+            const rows = [];
+            let applyFailed = false;
+
+            for (const image of all) {
+              const ref = `ghcr.io/${owner}/dodona-${image}:latest`;
+              const revision = await revisionOf(ref);
+              const digest = revision ? await digestOf(ref) : '';
+
+              // Fail-safe: never seed what cannot be verified.
+              if (!revision || !digest) {
+                console.log(`${image}: skipped, cannot read :latest or its revision label`);
+                rows.push({ image, action: 'skipped: cannot verify', digest: '' });
+                continue;
+              }
+
+              const known = await run('git', ['cat-file', '-e', `${revision}^{commit}`]);
+              if (known.exitCode !== 0) {
+                console.log(`${image}: skipped, :latest was built from ${revision}, which this repository does not have`);
+                rows.push({ image, action: 'skipped: cannot verify', digest: '' });
+                continue;
+              }
+
+              const since = await run('git', ['rev-list', `${revision}..HEAD`, '--', `dodona-${image}.dockerfile`, `dodona-${image}`]);
+              if (since.exitCode !== 0) {
+                console.log(`${image}: skipped, could not list commits since ${revision} (${since.stderr.trim()})`);
+                rows.push({ image, action: 'skipped: cannot verify', digest: '' });
+                continue;
+              }
+
+              const commits = since.stdout.split('\n').filter(Boolean);
+              if (commits.length > 0) {
+                console.log(`${image}: ${commits.length} commit(s) since ${revision}, left alone`);
+                rows.push({ image, action: 'left alone: sources changed since :latest', digest });
+                continue;
+              }
+
+              console.log(`${image}: unchanged since ${revision}, would seed :next -> :latest (${digest})`);
+              if (apply) {
+                const tag = `ghcr.io/${owner}/dodona-${image}:next`;
+                const source = `ghcr.io/${owner}/dodona-${image}@${digest}`;
+                const created = await run('docker', ['buildx', 'imagetools', 'create', '--tag', tag, source]);
+                if (created.exitCode !== 0) {
+                  console.log(`${image}: imagetools create failed: ${created.stderr.trim()}`);
+                  rows.push({ image, action: 'apply failed, see log', digest });
+                  applyFailed = true;
+                  continue;
+                }
+              }
+
+              rows.push({ image, action: apply ? 'seeded :next -> :latest' : 'would seed :next -> :latest', digest });
+            }
+
+            const header = apply
+              ? '## Seed: apply run, retagged :next to :latest for unchanged images'
+              : '## Seed: report-only run, would retag :next to :latest for these images';
+
+            const lines = [header, '', '| Image | Action | Digest |', '| --- | --- | --- |'];
+            for (const { image, action, digest } of rows) {
+              lines.push(`| ${image} | ${action} | ${digest || 'n/a'} |`);
+            }
+            await core.summary.addRaw(lines.join('\n')).write();
+
+            if (applyFailed) {
+              core.setFailed('One or more imagetools create calls failed; see the step summary.');
+            }
