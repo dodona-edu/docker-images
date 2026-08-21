@@ -204,6 +204,17 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.detect.outputs.html_next }}
 
+  # Required-check anchor: the gate jobs report different check names when they
+  # run versus when they skip, so rulesets require this job instead.
+  gates:
+    needs: [detect, e2e-judge-html]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when a needed job failed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
+
   publish:
     needs: detect
     # The pull request check is the approval, so merging is what publishes.
