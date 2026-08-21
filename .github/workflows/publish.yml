@@ -22,7 +22,10 @@ concurrency:
 jobs:
   # On a pull request into master this is the manifest of what merging would
   # ship. On the merge itself it resolves the same digests for the retag.
-  detect:
+  # Classification happens per image: a stale image, or one this pull request
+  # changed without staging a build, turns the check red. An image with
+  # simply nothing pending does not.
+  manifest:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,47 +86,18 @@ jobs:
               await new Promise((resolve) => setTimeout(resolve, pollSeconds * 1000));
             }
 
-      # The wait only proves no build is running. A failed build leaves :next on
-      # whatever the last green run pushed, which is not dev's tip.
-      - name: Check the build of dev's tip
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const headSha = context.payload.pull_request.head.sha;
-
-            let runs;
-            try {
-              const { data } = await github.rest.actions.listWorkflowRuns({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'build.yml',
-                head_sha: headSha,
-                per_page: 100,
-              });
-              runs = data.workflow_runs;
-            } catch (error) {
-              core.setFailed(`Could not tell whether Build succeeded for ${headSha} (${error.message}), so a stale :next cannot be ruled out. Re-run this check to try again.`);
-              return;
-            }
-
-            // Commits from before this workflow existed have no run to check.
-            if (runs.length === 0) {
-              core.info(`No Build run for ${headSha}, nothing to verify.`);
-              return;
-            }
-
-            const [latest] = runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-            if (latest.conclusion !== 'success') {
-              const outcome = latest.conclusion || latest.status;
-              core.setFailed(`Build ${outcome} for dev's tip ${headSha} (${latest.html_url}), so :next does not reflect it. Fix dev and this check re-runs on the next push.`);
-              return;
-            }
-
-            core.info(`Build succeeded for ${headSha} (${latest.html_url}).`);
-
       - uses: actions/checkout@v7
+        with:
+          # A pull request is otherwise checked out as the merge preview, and
+          # what gets classified below is the state of dev's tip.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Staleness reads history back to the commit :next was built from.
+          fetch-depth: 0
+
+      # The classification diffs against master, which the checkout above was
+      # not asked for.
+      - name: Fetch master
+        run: git fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
 
       - id: images
         run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
@@ -135,7 +109,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Resolve what is pending
+      - name: Classify every image
         id: resolve
         uses: actions/github-script@v9
         env:
@@ -145,79 +119,179 @@ jobs:
           script: |
             const all = JSON.parse(process.env.ALL_IMAGES);
 
+            const run = (command, args) =>
+              exec.getExecOutput(command, args, { ignoreReturnCode: true, silent: true });
+
             // {{.Manifest.Digest}} silently renders the whole output, not the digest.
             const digestOf = async (ref) => {
-              const inspected = await exec.getExecOutput(
-                'docker',
-                ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Manifest}}'],
-                { ignoreReturnCode: true, silent: true }
-              );
-              return inspected.exitCode === 0 ? JSON.parse(inspected.stdout).digest : '';
+              const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Manifest}}']);
+              if (inspected.exitCode !== 0) {
+                return '';
+              }
+              try {
+                return JSON.parse(inspected.stdout).digest || '';
+              } catch {
+                return '';
+              }
+            };
+
+            // {{json .Image}} carries the config, and with it the labels the build stamped.
+            const revisionOf = async (ref) => {
+              const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Image}}']);
+              if (inspected.exitCode !== 0) {
+                return '';
+              }
+              try {
+                return JSON.parse(inspected.stdout).config?.Labels?.['org.opencontainers.image.revision'] || '';
+              } catch {
+                return '';
+              }
+            };
+
+            // build.yml derives these same paths for its own staleness check; keep the two in sync.
+            const pathsOf = (image) => [`dodona-${image}.dockerfile`, `dodona-${image}`];
+
+            // Anything that leaves the answer unknown counts as stale: publishing an
+            // image older than dev is worse than asking for a rebuild.
+            const stalenessOf = async (image, revision) => {
+              if (!revision) {
+                return 'the staged image carries no revision label';
+              }
+
+              const known = await run('git', ['cat-file', '-e', `${revision}^{commit}`]);
+              if (known.exitCode !== 0) {
+                return `the repository does not have commit ${revision}`;
+              }
+
+              const since = await run('git', ['rev-list', `${revision}..HEAD`, '--', ...pathsOf(image)]);
+              if (since.exitCode !== 0) {
+                return `the commits since ${revision} could not be listed (${since.stderr.trim()})`;
+              }
+
+              const commits = since.stdout.split('\n').filter(Boolean);
+              if (commits.length > 0) {
+                return `${commits.length} commit(s) landed since ${revision}`;
+              }
+
+              return '';
+            };
+
+            const claimedChanges = async (image) => {
+              // The merge already happened, so what the pull request carried no longer
+              // decides anything, and there is no pull request diff to read it from.
+              if (context.eventName === 'push') {
+                return null;
+              }
+
+              const diff = await run('git', ['diff', '--name-only', 'origin/master...HEAD', '--', ...pathsOf(image)]);
+              // Unknown counts as changed, so an unbuildable image is not waved through,
+              // but stays distinguishable from a genuine claim so the note can admit it.
+              if (diff.exitCode !== 0) {
+                return 'unknown';
+              }
+
+              return diff.stdout.split('\n').some((line) => line.trim() !== '');
             };
 
             const resolved = await Promise.all(all.map(async (image) => {
               const repository = `ghcr.io/${process.env.OWNER}/dodona-${image}`;
-              const next = await digestOf(`${repository}:next`);
-              const current = next ? await digestOf(`${repository}:latest`) : '';
-              return { image, repository, next, current };
+              const [next, current] = await Promise.all([digestOf(`${repository}:next`), digestOf(`${repository}:latest`)]);
+              const staleness = next ? await stalenessOf(image, await revisionOf(`${repository}:next`)) : '';
+              const claimed = await claimedChanges(image);
+              return { image, repository, next, current, staleness, claimed };
             }));
 
-            const summary = (line) => core.summary.addRaw(`${line}\n`).write();
-
-            await summary('## Pending');
-            await summary('');
-            await summary('| image | :latest |');
-            await summary('| --- | --- |');
-
+            const rows = [];
             const pending = [];
-            for (const { image, repository, next, current } of resolved) {
-              // No :next tag at all is nothing pending, not a failure.
-              if (!next) {
-                console.log(`${image}: no :next tag`);
-                await summary(`| \`${image}\` | nothing pending, no \`:next\` |`);
+            const blocking = [];
+
+            for (const { image, repository, next, current, staleness, claimed } of resolved) {
+              if (next && staleness) {
+                console.log(`${image}: stale, ${staleness}`);
+                rows.push({ image, status: 'stale', level: 'red', latest: current, ships: next, note: `${staleness}, a dev build has to land first` });
+                blocking.push(image);
                 continue;
               }
 
-              if (next === current) {
+              if (next && next !== current) {
+                console.log(`${image}: ${current || 'none'} -> ${next}`);
+                // claimed is null on push, where there is no pull request diff to read; leave the note empty rather than guessing.
+                const note = claimed === null ? '' : claimed === 'unknown' ? 'change detection failed, treated as changed' : claimed ? 'this pull request changes the image' : 'rebuild only, no source changes';
+                rows.push({ image, status: 'pending', level: 'ok', latest: current, ships: next, note });
+                pending.push({ image, repository, next, current });
+                continue;
+              }
+
+              if (next) {
                 console.log(`${image}: :next is already :latest (${next})`);
-                await summary(`| \`${image}\` | nothing pending, \`:next\` is already published |`);
+                rows.push({ image, status: 'up to date', level: 'ok', latest: current, ships: '', note: '' });
                 continue;
               }
 
-              console.log(`${image}: ${current || 'none'} -> ${next}`);
-              const from = current ? `\`${current}\`` : 'nothing';
-              await summary(`| \`${image}\` | pending, moves to \`${next}\` from ${from} |`);
-              pending.push({ image, repository, next, current });
+              if (claimed) {
+                console.log(`${image}: changed here, nothing staged`);
+                // claimed === 'unknown' is still truthy, so this keeps blocking, but the note admits the uncertainty.
+                const note = claimed === 'unknown'
+                  ? 'change detection failed, treated as changed; nothing is staged for this image'
+                  : 'this pull request changes the image but nothing was staged for it';
+                rows.push({ image, status: 'not staged', level: 'red', latest: current, ships: '', note });
+                blocking.push(image);
+                continue;
+              }
+
+              console.log(`${image}: no :next tag`);
+              rows.push({ image, status: 'not staged', level: 'warn', latest: current, ships: '', note: 'nothing to ship, :latest stays where it is' });
             }
+
+            const summary = (line) => core.summary.addRaw(`${line}\n`).write();
+            const icon = { red: '❌', warn: '⚠️', ok: '✅' };
+
+            await summary('## Manifest');
+            await summary('');
+            await summary('| image | status | :latest | ships | note |');
+            await summary('| --- | --- | --- | --- | --- |');
+
+            for (const { image, status, level, latest, ships, note } of rows) {
+              const latestCell = latest ? `\`${latest}\`` : 'nothing';
+              const shipsCell = ships ? `\`${ships}\`` : '-';
+              await summary(`| \`${image}\` | ${icon[level]} ${status} | ${latestCell} | ${shipsCell} | ${note} |`);
+            }
+
+            await summary('');
+            await summary(`${pending.length} image(s) would ship.`);
 
             core.setOutput('pending', JSON.stringify(pending));
             core.setOutput('html_next', pending.find(p => p.image === 'html')?.next || '');
             core.setOutput('python_next', pending.find(p => p.image === 'python')?.next || '');
 
+            if (blocking.length > 0 && context.eventName === 'pull_request') {
+              core.setFailed(`${blocking.join(', ')} would not publish safely, see the manifest above for why.`);
+            }
+
   # Runs the consumer judge on the digest merging would publish, not on a rebuild
   # of it. The retag needs no link to this: a red check blocks the merge.
   e2e-judge-html:
-    needs: detect
-    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.html_next != '' }}
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.html_next != '' }}
     permissions:
       contents: read
       packages: read
     uses: dodona-edu/judge-html/.github/workflows/e2e.yml@main
     with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.detect.outputs.html_next }}
+      image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.manifest.outputs.html_next }}
 
   # judge-pythia is private, and a public repository cannot call a private one's
   # reusable workflow, so this job checks the judge out with a read-only checkout
   # key and runs its suite here.
   e2e-judge-pythia:
-    needs: detect
-    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.python_next != '' }}
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.python_next != '' }}
     permissions:
       contents: read
       packages: read
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.manifest.outputs.python_next }}
       options: --user root
     steps:
       - uses: actions/checkout@v7
@@ -231,19 +305,19 @@ jobs:
         run: diff -r integration-tests/expected integration-tests/generated
 
   e2e-judge-turtle:
-    needs: detect
-    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.python_next != '' }}
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.python_next != '' }}
     permissions:
       contents: read
       packages: read
     uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@main
     with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.manifest.outputs.python_next }}
 
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
-  gates:
-    needs: [detect, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
+  publishable:
+    needs: [manifest, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -252,9 +326,9 @@ jobs:
         run: exit 1
 
   publish:
-    needs: detect
+    needs: manifest
     # The pull request check is the approval, so merging is what publishes.
-    if: ${{ github.event_name == 'push' && needs.detect.outputs.pending != '[]' }}
+    if: ${{ github.event_name == 'push' && needs.manifest.outputs.pending != '[]' }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -269,7 +343,7 @@ jobs:
       - name: Move next to latest
         uses: actions/github-script@v9
         env:
-          PENDING: ${{ needs.detect.outputs.pending }}
+          PENDING: ${{ needs.manifest.outputs.pending }}
         with:
           script: |
             const pending = JSON.parse(process.env.PENDING);
