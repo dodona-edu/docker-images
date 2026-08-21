@@ -1,4 +1,4 @@
-# Available to student submissions, not to any judge. Owned by the Dodona team,
+# For student submissions; no judge requires these. Owned by the Dodona team,
 # no repository outside this one keeps a copy.
 biopython==1.87
 lxml==6.1.1
