@@ -229,10 +229,45 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html:pr-${{ github.event.pull_request.number }}
 
+  # Both judges run on the exact image built for this pull request.
+  # judge-pythia is private, and a public repository cannot call a private one's
+  # reusable workflow, so this job checks the judge out with a read-only checkout
+  # key and runs its suite here.
+  e2e-judge-pythia:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
+      options: --user root
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: dodona-edu/judge-pythia
+          ref: master
+          ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+      - name: Save the new output
+        run: .github/workflows/integration-tests . integration-tests integration-tests/generated
+      - name: Compare original and new output
+        run: diff -r integration-tests/expected integration-tests/generated
+
+  e2e-judge-turtle:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
+
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, build, e2e-judge-html]
+    needs: [detect, build, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

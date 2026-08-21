@@ -1,0 +1,9 @@
+# No judge imports these. Nothing is dropped here, see
+# https://github.com/dodona-edu/docker-images/issues/438.
+mako==1.3.12  # fossil of an older TESTed, current TESTed dropped it
+psutil==7.2.2  # from TESTed running on this image, before dodona-tested existed
+pydantic==2.13.4  # fossil of an older TESTed, current TESTed dropped it
+pyhumps==3.8.0  # fossil of an older TESTed, current TESTed dropped it
+pyshp==3.0.9  # possibly imported by geo exercises, which we cannot scan
+setuptools==82.0.1  # pkg_resources era, exercises might still import it
+typing-inspect==0.9.0  # from TESTed running on this image, before dodona-tested existed

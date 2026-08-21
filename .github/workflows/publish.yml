@@ -31,6 +31,7 @@ jobs:
     outputs:
       pending: ${{ steps.resolve.outputs.pending }}
       html_next: ${{ steps.resolve.outputs.html_next }}
+      python_next: ${{ steps.resolve.outputs.python_next }}
     steps:
       # A dev build in flight is about to replace :next, so the digests resolved
       # below would certify an image the merge will not ship. Every merge to dev
@@ -191,6 +192,7 @@ jobs:
 
             core.setOutput('pending', JSON.stringify(pending));
             core.setOutput('html_next', pending.find(p => p.image === 'html')?.next || '');
+            core.setOutput('python_next', pending.find(p => p.image === 'python')?.next || '');
 
   # Runs the consumer judge on the digest merging would publish, not on a rebuild
   # of it. The retag needs no link to this: a red check blocks the merge.
@@ -204,10 +206,44 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.detect.outputs.html_next }}
 
+  # judge-pythia is private, and a public repository cannot call a private one's
+  # reusable workflow, so this job checks the judge out with a read-only checkout
+  # key and runs its suite here.
+  e2e-judge-pythia:
+    needs: detect
+    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.python_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
+      options: --user root
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: dodona-edu/judge-pythia
+          ref: master
+          ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+      - name: Save the new output
+        run: .github/workflows/integration-tests . integration-tests integration-tests/generated
+      - name: Compare original and new output
+        run: diff -r integration-tests/expected integration-tests/generated
+
+  e2e-judge-turtle:
+    needs: detect
+    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.python_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
+
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, e2e-judge-html]
+    needs: [detect, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
