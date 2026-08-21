@@ -22,7 +22,7 @@ concurrency:
 jobs:
   # On a pull request into master this is the manifest of what merging would
   # ship. On the merge itself it resolves the same digests for the retag.
-  detect:
+  manifest:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -197,27 +197,27 @@ jobs:
   # Runs the consumer judge on the digest merging would publish, not on a rebuild
   # of it. The retag needs no link to this: a red check blocks the merge.
   e2e-judge-html:
-    needs: detect
-    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.html_next != '' }}
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.html_next != '' }}
     permissions:
       contents: read
       packages: read
     uses: dodona-edu/judge-html/.github/workflows/e2e.yml@main
     with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.detect.outputs.html_next }}
+      image: ghcr.io/${{ github.repository_owner }}/dodona-html@${{ needs.manifest.outputs.html_next }}
 
   # judge-pythia is private, and a public repository cannot call a private one's
   # reusable workflow, so this job checks the judge out with a read-only checkout
   # key and runs its suite here.
   e2e-judge-pythia:
-    needs: detect
-    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.python_next != '' }}
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.python_next != '' }}
     permissions:
       contents: read
       packages: read
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.manifest.outputs.python_next }}
       options: --user root
     steps:
       - uses: actions/checkout@v7
@@ -231,19 +231,19 @@ jobs:
         run: diff -r integration-tests/expected integration-tests/generated
 
   e2e-judge-turtle:
-    needs: detect
-    if: ${{ github.event_name == 'pull_request' && needs.detect.outputs.python_next != '' }}
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.python_next != '' }}
     permissions:
       contents: read
       packages: read
     uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@main
     with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.detect.outputs.python_next }}
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.manifest.outputs.python_next }}
 
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
-  gates:
-    needs: [detect, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
+  publishable:
+    needs: [manifest, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -252,9 +252,9 @@ jobs:
         run: exit 1
 
   publish:
-    needs: detect
+    needs: manifest
     # The pull request check is the approval, so merging is what publishes.
-    if: ${{ github.event_name == 'push' && needs.detect.outputs.pending != '[]' }}
+    if: ${{ github.event_name == 'push' && needs.manifest.outputs.pending != '[]' }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -269,7 +269,7 @@ jobs:
       - name: Move next to latest
         uses: actions/github-script@v9
         env:
-          PENDING: ${{ needs.detect.outputs.pending }}
+          PENDING: ${{ needs.manifest.outputs.pending }}
         with:
           script: |
             const pending = JSON.parse(process.env.PENDING);
