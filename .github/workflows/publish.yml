@@ -177,9 +177,10 @@ jobs:
             };
 
             const claimedChanges = async (image) => {
-              // The merge already happened, so what the pull request carried no longer decides anything.
+              // The merge already happened, so what the pull request carried no longer
+              // decides anything, and there is no pull request diff to read it from.
               if (context.eventName === 'push') {
-                return false;
+                return null;
               }
 
               const diff = await run('git', ['diff', '--name-only', 'origin/master...HEAD', '--', ...pathsOf(image)]);
@@ -195,7 +196,7 @@ jobs:
               const repository = `ghcr.io/${process.env.OWNER}/dodona-${image}`;
               const [next, current] = await Promise.all([digestOf(`${repository}:next`), digestOf(`${repository}:latest`)]);
               const staleness = next ? await stalenessOf(image, await revisionOf(`${repository}:next`)) : '';
-              const claimed = next ? false : await claimedChanges(image);
+              const claimed = await claimedChanges(image);
               return { image, repository, next, current, staleness, claimed };
             }));
 
@@ -213,7 +214,9 @@ jobs:
 
               if (next && next !== current) {
                 console.log(`${image}: ${current || 'none'} -> ${next}`);
-                rows.push({ image, status: 'pending', level: 'ok', latest: current, ships: next, note: '' });
+                // claimed is null on push, where there is no pull request diff to read; leave the note empty rather than guessing.
+                const note = claimed === null ? '' : claimed ? 'this pull request changes the image' : 'rebuild only, no source changes';
+                rows.push({ image, status: 'pending', level: 'ok', latest: current, ships: next, note });
                 pending.push({ image, repository, next, current });
                 continue;
               }
