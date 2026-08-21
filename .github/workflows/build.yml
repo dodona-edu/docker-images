@@ -46,7 +46,7 @@ jobs:
         with:
           script: |
             const imgs = JSON.parse(process.env.IMAGES);
-            const map = Object.fromEntries(imgs.map(i => [i, `dodona-${i}.dockerfile`]));
+            const map = Object.fromEntries(imgs.map(i => [i, [`dodona-${i}.dockerfile`, `dodona-${i}/**`]]));
             core.setOutput('filters', JSON.stringify(map));
 
       - name: Detect changed images
@@ -217,3 +217,14 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+  # Runs the consumer judge on the exact image built for this pull request.
+  e2e-judge-html:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'html') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-html:pr-${{ github.event.pull_request.number }}
