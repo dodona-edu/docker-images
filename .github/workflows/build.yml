@@ -254,14 +254,13 @@ jobs:
       - name: Compare original and new output
         run: diff -r integration-tests/expected integration-tests/generated
 
-  # TODO: point the ref at @main once judge-turtle#111 is merged.
   e2e-judge-turtle:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
     permissions:
       contents: read
       packages: read
-    uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
+    uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@main
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
 
