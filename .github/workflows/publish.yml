@@ -1,0 +1,235 @@
+name: Publish
+
+# Moves :next to :latest, the tag the workers pull. :previous keeps the digest
+# :latest pointed at before this run, so rolling back is retagging it.
+
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+  # Produces the pending report on demand, it never retags.
+  workflow_dispatch:
+
+concurrency:
+  # Every run that retags waits its turn in ship, and queue: max is what keeps a
+  # waiting one from being dropped by the next push or dispatch. It rules out
+  # cancel-in-progress, so a superseded check queues behind its predecessor
+  # instead of cancelling it.
+  group: publish-${{ github.event_name == 'pull_request' && format('check-{0}', github.event.pull_request.number) || 'ship' }}
+  queue: max
+
+jobs:
+  # On a pull request into master this is the manifest of what merging would
+  # ship. On the merge itself it resolves the same digests for the retag.
+  detect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    outputs:
+      pending: ${{ steps.resolve.outputs.pending }}
+    steps:
+      # A dev build in flight is about to replace :next, so the digests resolved
+      # below would certify an image the merge will not ship. Every merge to dev
+      # starts one and re-runs this check, so it waits rather than going red.
+      # The poll covers the whole branch: a build of an older commit still
+      # rewrites :next.
+      - name: Wait for a dev build in flight
+        if: ${{ github.event_name != 'push' }}
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pollSeconds = 20;
+            const capMinutes = 20;
+            const deadline = Date.now() + capMinutes * 60 * 1000;
+
+            const runningBuilds = async () => {
+              const runs = await Promise.all(['queued', 'in_progress'].map((status) =>
+                github.rest.actions.listWorkflowRuns({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: 'build.yml',
+                  branch: 'dev',
+                  status,
+                  per_page: 1,
+                })
+              ));
+              return runs.reduce((total, { data }) => total + data.total_count, 0);
+            };
+
+            while (true) {
+              let running;
+              try {
+                running = await runningBuilds();
+              } catch (error) {
+                core.setFailed(`Could not tell whether a dev build is running (${error.message}), so a stale :next cannot be ruled out. Re-run this check when Build finishes.`);
+                return;
+              }
+
+              if (running === 0) {
+                break;
+              }
+
+              if (Date.now() >= deadline) {
+                core.setFailed(`A dev build has been running for over ${capMinutes} minutes, so :next still does not hold dev's latest state. Re-run this check when Build finishes.`);
+                return;
+              }
+
+              core.info(`Waiting on ${running} dev build(s), :next is not settled yet. Checking again in ${pollSeconds}s.`);
+              await new Promise((resolve) => setTimeout(resolve, pollSeconds * 1000));
+            }
+
+      # The wait only proves no build is running. A failed build leaves :next on
+      # whatever the last green run pushed, which is not dev's tip.
+      - name: Check the build of dev's tip
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const headSha = context.payload.pull_request.head.sha;
+
+            let runs;
+            try {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'build.yml',
+                head_sha: headSha,
+                per_page: 100,
+              });
+              runs = data.workflow_runs;
+            } catch (error) {
+              core.setFailed(`Could not tell whether Build succeeded for ${headSha} (${error.message}), so a stale :next cannot be ruled out. Re-run this check to try again.`);
+              return;
+            }
+
+            // Commits from before this workflow existed have no run to check.
+            if (runs.length === 0) {
+              core.info(`No Build run for ${headSha}, nothing to verify.`);
+              return;
+            }
+
+            const [latest] = runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            if (latest.conclusion !== 'success') {
+              const outcome = latest.conclusion || latest.status;
+              core.setFailed(`Build ${outcome} for dev's tip ${headSha} (${latest.html_url}), so :next does not reflect it. Fix dev and this check re-runs on the next push.`);
+              return;
+            }
+
+            core.info(`Build succeeded for ${headSha} (${latest.html_url}).`);
+
+      - uses: actions/checkout@v7
+
+      - id: images
+        run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve what is pending
+        id: resolve
+        uses: actions/github-script@v9
+        env:
+          ALL_IMAGES: ${{ steps.images.outputs.images }}
+          OWNER: ${{ github.repository_owner }}
+        with:
+          script: |
+            const all = JSON.parse(process.env.ALL_IMAGES);
+
+            // {{.Manifest.Digest}} silently renders the whole output, not the digest.
+            const digestOf = async (ref) => {
+              const inspected = await exec.getExecOutput(
+                'docker',
+                ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Manifest}}'],
+                { ignoreReturnCode: true, silent: true }
+              );
+              return inspected.exitCode === 0 ? JSON.parse(inspected.stdout).digest : '';
+            };
+
+            const resolved = await Promise.all(all.map(async (image) => {
+              const repository = `ghcr.io/${process.env.OWNER}/dodona-${image}`;
+              const next = await digestOf(`${repository}:next`);
+              const current = next ? await digestOf(`${repository}:latest`) : '';
+              return { image, repository, next, current };
+            }));
+
+            const summary = (line) => core.summary.addRaw(`${line}\n`).write();
+
+            await summary('## Pending');
+            await summary('');
+            await summary('| image | :latest |');
+            await summary('| --- | --- |');
+
+            const pending = [];
+            for (const { image, repository, next, current } of resolved) {
+              // No :next tag at all is nothing pending, not a failure.
+              if (!next) {
+                console.log(`${image}: no :next tag`);
+                await summary(`| \`${image}\` | nothing pending, no \`:next\` |`);
+                continue;
+              }
+
+              if (next === current) {
+                console.log(`${image}: :next is already :latest (${next})`);
+                await summary(`| \`${image}\` | nothing pending, \`:next\` is already published |`);
+                continue;
+              }
+
+              console.log(`${image}: ${current || 'none'} -> ${next}`);
+              const from = current ? `\`${current}\`` : 'nothing';
+              await summary(`| \`${image}\` | pending, moves to \`${next}\` from ${from} |`);
+              pending.push({ image, repository, next, current });
+            }
+
+            core.setOutput('pending', JSON.stringify(pending));
+
+  publish:
+    needs: detect
+    # The pull request check is the approval, so merging is what publishes.
+    if: ${{ github.event_name == 'push' && needs.detect.outputs.pending != '[]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move next to latest
+        uses: actions/github-script@v9
+        env:
+          PENDING: ${{ needs.detect.outputs.pending }}
+        with:
+          script: |
+            const pending = JSON.parse(process.env.PENDING);
+
+            const summary = (line) => core.summary.addRaw(`${line}\n`).write();
+
+            await summary('## Published');
+            await summary('');
+            await summary('| image | :latest |');
+            await summary('| --- | --- |');
+
+            for (const { image, repository, next, current } of pending) {
+              const from = current ? `\`${current}\`` : 'nothing';
+
+              if (current) {
+                await exec.exec('docker', ['buildx', 'imagetools', 'create', '-t', `${repository}:previous`, `${repository}@${current}`]);
+              }
+              await exec.exec('docker', ['buildx', 'imagetools', 'create', '-t', `${repository}:latest`, `${repository}@${next}`]);
+
+              await summary(`| \`${image}\` | moved to \`${next}\` from ${from} |`);
+            }
+
+            await summary('');
+            await summary(`Published ${pending.length} image(s).`);
