@@ -219,13 +219,12 @@ jobs:
         cache-to: type=gha,mode=max
 
   # Runs the consumer judge on the exact image built for this pull request.
-  # TODO: point the ref at @main once judge-html#289 is merged.
   e2e-judge-html:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'html') }}
     permissions:
       contents: read
       packages: read
-    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
+    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@main
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html:pr-${{ github.event.pull_request.number }}
