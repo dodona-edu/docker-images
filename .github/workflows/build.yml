@@ -219,14 +219,13 @@ jobs:
         cache-to: type=gha,mode=max
 
   # Runs the consumer judge on the exact image built for this pull request.
-  # TODO: point the ref at @main once judge-html#289 is merged.
   e2e-judge-html:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'html') }}
     permissions:
       contents: read
       packages: read
-    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
+    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@main
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html:pr-${{ github.event.pull_request.number }}
 
@@ -265,3 +264,14 @@ jobs:
     uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@enhancement/image-owned-deps-spike
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
+
+  # Required-check anchor: the gate jobs report different check names when they
+  # run versus when they skip, so rulesets require this job instead.
+  gates:
+    needs: [detect, build, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when a needed job failed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
