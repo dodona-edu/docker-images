@@ -165,7 +165,7 @@ jobs:
 
               const since = await run('git', ['rev-list', `${revision}..HEAD`, '--', ...pathsOf(image)]);
               if (since.exitCode !== 0) {
-                return `the commits since ${revision} could not be listed`;
+                return `the commits since ${revision} could not be listed (${since.stderr.trim()})`;
               }
 
               const commits = since.stdout.split('\n').filter(Boolean);
@@ -184,9 +184,10 @@ jobs:
               }
 
               const diff = await run('git', ['diff', '--name-only', 'origin/master...HEAD', '--', ...pathsOf(image)]);
-              // Unknown counts as changed, so an unbuildable image is not waved through.
+              // Unknown counts as changed, so an unbuildable image is not waved through,
+              // but stays distinguishable from a genuine claim so the note can admit it.
               if (diff.exitCode !== 0) {
-                return true;
+                return 'unknown';
               }
 
               return diff.stdout.split('\n').some((line) => line.trim() !== '');
@@ -215,7 +216,7 @@ jobs:
               if (next && next !== current) {
                 console.log(`${image}: ${current || 'none'} -> ${next}`);
                 // claimed is null on push, where there is no pull request diff to read; leave the note empty rather than guessing.
-                const note = claimed === null ? '' : claimed ? 'this pull request changes the image' : 'rebuild only, no source changes';
+                const note = claimed === null ? '' : claimed === 'unknown' ? 'change detection failed, treated as changed' : claimed ? 'this pull request changes the image' : 'rebuild only, no source changes';
                 rows.push({ image, status: 'pending', level: 'ok', latest: current, ships: next, note });
                 pending.push({ image, repository, next, current });
                 continue;
@@ -229,7 +230,11 @@ jobs:
 
               if (claimed) {
                 console.log(`${image}: changed here, nothing staged`);
-                rows.push({ image, status: 'not staged', level: 'red', latest: current, ships: '', note: 'this pull request changes the image but nothing was staged for it' });
+                // claimed === 'unknown' is still truthy, so this keeps blocking, but the note admits the uncertainty.
+                const note = claimed === 'unknown'
+                  ? 'change detection failed, treated as changed; nothing is staged for this image'
+                  : 'this pull request changes the image but nothing was staged for it';
+                rows.push({ image, status: 'not staged', level: 'red', latest: current, ships: '', note });
                 blocking.push(image);
                 continue;
               }
