@@ -31,6 +31,7 @@ jobs:
       contents: read
       packages: read
       actions: read
+      pull-requests: write
     outputs:
       pending: ${{ steps.resolve.outputs.pending }}
       html_next: ${{ steps.resolve.outputs.html_next }}
@@ -243,22 +244,54 @@ jobs:
               rows.push({ image, status: 'not staged', level: 'warn', latest: current, ships: '', note: 'nothing to ship, :latest stays where it is' });
             }
 
-            const summary = (line) => core.summary.addRaw(`${line}\n`).write();
             const icon = { red: '❌', warn: '⚠️', ok: '✅' };
 
-            await summary('## Manifest');
-            await summary('');
-            await summary('| image | status | :latest | ships | note |');
-            await summary('| --- | --- | --- | --- | --- |');
+            // Shared by the step summary and the PR comment, so the two never drift apart.
+            const renderManifest = () => {
+              const lines = [];
+              lines.push('## Manifest');
+              lines.push('');
+              lines.push('| image | status | :latest | ships | note |');
+              lines.push('| --- | --- | --- | --- | --- |');
 
-            for (const { image, status, level, latest, ships, note } of rows) {
-              const latestCell = latest ? `\`${latest}\`` : 'nothing';
-              const shipsCell = ships ? `\`${ships}\`` : '-';
-              await summary(`| \`${image}\` | ${icon[level]} ${status} | ${latestCell} | ${shipsCell} | ${note} |`);
+              for (const { image, status, level, latest, ships, note } of rows) {
+                const latestCell = latest ? `\`${latest}\`` : 'nothing';
+                const shipsCell = ships ? `\`${ships}\`` : '-';
+                lines.push(`| \`${image}\` | ${icon[level]} ${status} | ${latestCell} | ${shipsCell} | ${note} |`);
+              }
+
+              lines.push('');
+              lines.push(`${pending.length} image(s) would ship.`);
+              return lines.join('\n');
+            };
+
+            const manifest = renderManifest();
+            await core.summary.addRaw(`${manifest}\n`).write();
+
+            // Only a pull request has a PR to comment on; push (the merge itself) and
+            // workflow_dispatch (an on-demand report) have nowhere to post this.
+            if (context.eventName === 'pull_request') {
+              // Marks the comment this job owns, so re-runs update it instead of piling up.
+              const marker = '<!-- ship-manifest -->';
+              const owner = context.repo.owner;
+              const repo = context.repo.repo;
+              const issue_number = context.payload.pull_request.number;
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number,
+                per_page: 100,
+              });
+              const existing = comments.find((comment) => comment.body?.startsWith(marker));
+
+              const body = `${marker}\n${manifest}`;
+              if (existing) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number, body });
+              }
             }
-
-            await summary('');
-            await summary(`${pending.length} image(s) would ship.`);
 
             core.setOutput('pending', JSON.stringify(pending));
             core.setOutput('html_next', pending.find(p => p.image === 'html')?.next || '');
