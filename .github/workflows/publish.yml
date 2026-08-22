@@ -254,19 +254,47 @@ jobs:
               const lines = [];
               lines.push('## Manifest');
               lines.push('');
+              lines.push(`${pending.length} image(s) would ship.`);
 
-              for (const { image, status, level, latest, ships, note } of rows) {
-                const summary = note ? `${status}, ${note}` : status;
-                lines.push(`- ${icon[level]} \`${image}\` ${summary}`);
+              const renderRows = (rowsToRender) => {
+                for (const { image, status, level, latest, ships, note } of rowsToRender) {
+                  const summary = note ? `${status}, ${note}` : status;
+                  lines.push(`- ${icon[level]} \`${image}\` ${summary}`);
 
-                if (ships) {
-                  const shipsLine = latest ? `ships \`${ships}\` replacing \`${latest}\`` : `ships \`${ships}\``;
-                  lines.push(`  - ${shipsLine}`);
+                  if (ships) {
+                    const shipsLine = latest ? `ships \`${ships}\` replacing \`${latest}\`` : `ships \`${ships}\``;
+                    lines.push(`  - ${shipsLine}`);
+                  }
                 }
+              };
+
+              // What ships goes first: pending, then red (stale, or changed but
+              // nothing staged), then warn. Alphabetical within each group falls out
+              // of images.yml's own order, which rows never reshuffles. Up to date
+              // carries no urgency, so it moves below the fold.
+              const upToDate = rows.filter((row) => row.status === 'up to date');
+              const shipping = rows.filter((row) => row.status !== 'up to date');
+              const ordered = [
+                ...shipping.filter((row) => row.level === 'ok'),
+                ...shipping.filter((row) => row.level === 'red'),
+                ...shipping.filter((row) => row.level === 'warn'),
+              ];
+
+              if (ordered.length > 0) {
+                lines.push('');
+                renderRows(ordered);
               }
 
-              lines.push('');
-              lines.push(`${pending.length} image(s) would ship.`);
+              if (upToDate.length > 0) {
+                lines.push('');
+                lines.push('<details>');
+                lines.push(`<summary>${upToDate.length} up to date</summary>`);
+                lines.push('');
+                renderRows(upToDate);
+                lines.push('');
+                lines.push('</details>');
+              }
+
               return lines.join('\n');
             };
 
