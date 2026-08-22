@@ -247,17 +247,22 @@ jobs:
             const icon = { red: '❌', warn: '⚠️', ok: '✅' };
 
             // Shared by the step summary and the PR comment, so the two never drift apart.
+            // A nested list instead of a table: the full sha256 digests need to stay
+            // copy-pasteable for rollbacks, and two full-digest table columns force
+            // horizontal scrolling and kill scannability.
             const renderManifest = () => {
               const lines = [];
               lines.push('## Manifest');
               lines.push('');
-              lines.push('| image | status | :latest | ships | note |');
-              lines.push('| --- | --- | --- | --- | --- |');
 
               for (const { image, status, level, latest, ships, note } of rows) {
-                const latestCell = latest ? `\`${latest}\`` : 'nothing';
-                const shipsCell = ships ? `\`${ships}\`` : '-';
-                lines.push(`| \`${image}\` | ${icon[level]} ${status} | ${latestCell} | ${shipsCell} | ${note} |`);
+                const summary = note ? `${status}, ${note}` : status;
+                lines.push(`- ${icon[level]} \`${image}\` ${summary}`);
+
+                if (ships) {
+                  const shipsLine = latest ? `ships \`${ships}\` replacing \`${latest}\`` : `ships \`${ships}\``;
+                  lines.push(`  - ${shipsLine}`);
+                }
               }
 
               lines.push('');
