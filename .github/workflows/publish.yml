@@ -197,19 +197,25 @@ jobs:
             const resolved = await Promise.all(all.map(async (image) => {
               const repository = `ghcr.io/${process.env.OWNER}/dodona-${image}`;
               const [next, current] = await Promise.all([digestOf(`${repository}:next`), digestOf(`${repository}:latest`)]);
-              const staleness = next ? await stalenessOf(image, await revisionOf(`${repository}:next`)) : '';
+              // Also needed for the "built from" line below, so keep it rather than
+              // discarding it once the staleness check has read it.
+              const nextRevision = next ? await revisionOf(`${repository}:next`) : '';
+              const staleness = next ? await stalenessOf(image, nextRevision) : '';
               const claimed = await claimedChanges(image);
-              return { image, repository, next, current, staleness, claimed };
+              return { image, repository, next, current, nextRevision, staleness, claimed };
             }));
 
             const rows = [];
             const pending = [];
             const blocking = [];
 
-            for (const { image, repository, next, current, staleness, claimed } of resolved) {
+            for (const { image, repository, next, current, nextRevision, staleness, claimed } of resolved) {
               if (next && staleness) {
                 console.log(`${image}: stale, ${staleness}`);
-                rows.push({ image, status: 'stale', level: 'red', latest: current, ships: next, note: `${staleness}, a dev build has to land first` });
+                // Only fetched for rows that actually render a "replacing" sub-bullet,
+                // to spare a registry call for the up to date / not staged rows below.
+                const currentRevision = current ? await revisionOf(`${repository}:latest`) : '';
+                rows.push({ image, status: 'stale', level: 'red', latest: current, ships: next, note: `${staleness}, a dev build has to land first`, nextRevision, currentRevision });
                 blocking.push(image);
                 continue;
               }
@@ -218,7 +224,8 @@ jobs:
                 console.log(`${image}: ${current || 'none'} -> ${next}`);
                 // claimed is null on push, where there is no pull request diff to read; leave the note empty rather than guessing.
                 const note = claimed === null ? '' : claimed === 'unknown' ? 'change detection failed, treated as changed' : claimed ? 'this pull request changes the image' : 'rebuild only, no source changes';
-                rows.push({ image, status: 'pending', level: 'ok', latest: current, ships: next, note });
+                const currentRevision = current ? await revisionOf(`${repository}:latest`) : '';
+                rows.push({ image, status: 'pending', level: 'ok', latest: current, ships: next, note, nextRevision, currentRevision });
                 pending.push({ image, repository, next, current });
                 continue;
               }
@@ -246,6 +253,11 @@ jobs:
 
             const icon = { red: '❌', warn: '⚠️', ok: '✅' };
 
+            // Digests answer identity but not "what code is this", so link the
+            // revision label back to the commit it was built from.
+            const commitUrl = (revision) => `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${revision}`;
+            const builtFrom = (revision) => revision ? ` built from [\`${revision.slice(0, 7)}\`](${commitUrl(revision)})` : '';
+
             // Shared by the step summary and the PR comment, so the two never drift apart.
             // A nested list instead of a table: the full sha256 digests need to stay
             // copy-pasteable for rollbacks, and two full-digest table columns force
@@ -257,13 +269,15 @@ jobs:
               lines.push(`${pending.length} image(s) would ship.`);
 
               const renderRows = (rowsToRender) => {
-                for (const { image, status, level, latest, ships, note } of rowsToRender) {
+                for (const { image, status, level, latest, ships, note, nextRevision, currentRevision } of rowsToRender) {
                   const summary = note ? `${status}, ${note}` : status;
                   lines.push(`- ${icon[level]} \`${image}\` ${summary}`);
 
                   if (ships) {
-                    const shipsLine = latest ? `ships \`${ships}\` replacing \`${latest}\`` : `ships \`${ships}\``;
-                    lines.push(`  - ${shipsLine}`);
+                    lines.push(`  - ships \`${ships}\`${builtFrom(nextRevision)}`);
+                    if (latest) {
+                      lines.push(`  - replacing \`${latest}\`${builtFrom(currentRevision)}`);
+                    }
                   }
                 }
               };
