@@ -1,4 +1,4 @@
 # Consumed by dodona-edu/judge-pythia, which keeps a copy of this list and
 # checks it against the image in its own CI.
 jsonschema==4.26.0
-pylint==4.0.5
+pylint==4.0.7
