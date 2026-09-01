@@ -3,5 +3,5 @@
 # numpy is an exercise dependency too, so exercises.txt pins it as well.
 Pillow==12.2.0
 cairosvg==2.9.0
-numpy==2.4.6
+numpy==2.5.2
 svg-turtle==1.1.0
