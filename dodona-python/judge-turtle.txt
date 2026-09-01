@@ -1,7 +1,7 @@
 # Consumed by dodona-edu/judge-turtle, which keeps a copy of this list and
 # checks it against the image in its own CI.
 # numpy is an exercise dependency too, so exercises.txt pins it as well.
-Pillow==12.2.0
+Pillow==12.3.0
 cairosvg==2.9.0
 numpy==2.4.6
 svg-turtle==1.1.0
