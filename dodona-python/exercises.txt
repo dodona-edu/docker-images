@@ -2,7 +2,7 @@
 # no repository outside this one keeps a copy.
 biopython==1.87
 lxml==6.1.1
-matplotlib==3.10.9
+matplotlib==3.11.1
 numpy==2.4.6
 pandas==3.0.3
 sortedcontainers==2.4.0
