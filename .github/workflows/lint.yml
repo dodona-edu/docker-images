@@ -3,12 +3,23 @@ name: Lint
 on: [push]
 
 jobs:
+  # A matrix cannot read a file, so the image list comes from a job.
+  images:
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.images.outputs.images }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: images
+        run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
+
   lint:
+    needs: images
     name: ${{ matrix.image }}
     strategy:
       fail-fast: false
       matrix:
-        image: [assembly, bash, c, compilers, csharp, docker, haskell, html, java, nextflow, nodejs, postgres, prolog, python, r, scheme, sqlite, tested]
+        image: ${{ fromJson(needs.images.outputs.images) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
