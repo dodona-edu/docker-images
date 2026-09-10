@@ -36,6 +36,7 @@ jobs:
       pending: ${{ steps.resolve.outputs.pending }}
       html_next: ${{ steps.resolve.outputs.html_next }}
       python_next: ${{ steps.resolve.outputs.python_next }}
+      tested_next: ${{ steps.resolve.outputs.tested_next }}
     steps:
       # A dev build in flight is about to replace :next, so the digests resolved
       # below would certify an image the merge will not ship. Every merge to dev
@@ -343,6 +344,7 @@ jobs:
             core.setOutput('pending', JSON.stringify(pending));
             core.setOutput('html_next', pending.find(p => p.image === 'html')?.next || '');
             core.setOutput('python_next', pending.find(p => p.image === 'python')?.next || '');
+            core.setOutput('tested_next', pending.find(p => p.image === 'tested')?.next || '');
 
             if (blocking.length > 0 && context.eventName === 'pull_request') {
               core.setFailed(`${blocking.join(', ')} would not publish safely, see the manifest above for why.`);
@@ -394,10 +396,20 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.manifest.outputs.python_next }}
 
+  e2e-universal-judge:
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.tested_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/universal-judge/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-tested@${{ needs.manifest.outputs.tested_next }}
+
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   publishable:
-    needs: [manifest, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
+    needs: [manifest, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

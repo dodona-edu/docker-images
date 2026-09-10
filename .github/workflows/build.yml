@@ -264,10 +264,20 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
 
+  e2e-universal-judge:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'tested') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/universal-judge/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-tested:pr-${{ github.event.pull_request.number }}
+
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, build, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle]
+    needs: [detect, build, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
