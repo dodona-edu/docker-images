@@ -396,17 +396,15 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-python@${{ needs.manifest.outputs.python_next }}
 
-  # TODO: point the uses ref at @master and drop the ref input once universal-judge#694 is merged; master has no devel/ scripts until then.
   e2e-universal-judge:
     needs: manifest
     if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.tested_next != '' }}
     permissions:
       contents: read
       packages: read
-    uses: dodona-edu/universal-judge/.github/workflows/e2e.yml@chore/e2e-workflow
+    uses: dodona-edu/universal-judge/.github/workflows/e2e.yml@master
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-tested@${{ needs.manifest.outputs.tested_next }}
-      ref: chore/e2e-workflow
 
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
