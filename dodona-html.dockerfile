@@ -1,5 +1,7 @@
 FROM python:3.13.2-slim-bookworm
 
+COPY dodona-html/requirements.txt /requirements.txt
+
 RUN <<EOF
   set -eux
 
@@ -19,14 +21,7 @@ RUN <<EOF
   chown -R runner:runner /mnt
 
 
-  pip install --no-cache-dir --upgrade \
-    beautifulsoup4==4.13.3 \
-    cssselect==1.2.0 \
-    lxml==5.3.1 \
-    tinycss2==1.4.0 \
-    py-emmet==1.3.1 \
-    html-similarity==0.3.3 \
-    colour==0.1.5
+  pip install --no-cache-dir --upgrade -r /requirements.txt
 EOF
 
 USER runner

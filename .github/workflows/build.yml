@@ -1,9 +1,12 @@
-name: Publish
+name: Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ dev ]
+  # Publish pull requests ship :next, so their candidates would be built and never used.
+  # Not branches: [ dev ], stacked feature pull requests target each other's branches.
   pull_request:
+    branches-ignore: [ master ]
     types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
     inputs:
@@ -12,8 +15,12 @@ on:
         type: boolean
         default: false
 
-env:
-  IMAGES: '["assembly","bash","c","compilers","csharp","docker","haskell","html","java","nextflow","nodejs","postgres","prolog","python","r","scheme","sqlite","tested"]'
+concurrency:
+  # Runs that write the same tag take one lane: :next on dev, :pr-N per pull
+  # request. queue takes no expression and rules out cancel-in-progress, so a
+  # superseded run finishes rather than stopping.
+  group: build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
+  queue: max
 
 jobs:
   detect:
@@ -23,23 +30,113 @@ jobs:
       has_images: ${{ steps.set-matrix.outputs.has_images }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Staleness reads history back to the commit :next was built from.
+          fetch-depth: 0
+
+      - id: images
+        run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
 
       - name: Build filters
+        if: ${{ github.event_name != 'push' }}
         id: genfilters
         uses: actions/github-script@v9
         env:
-          IMAGES: ${{ env.IMAGES }}
+          IMAGES: ${{ steps.images.outputs.images }}
         with:
           script: |
             const imgs = JSON.parse(process.env.IMAGES);
-            const map = Object.fromEntries(imgs.map(i => [i, `dodona-${i}.dockerfile`]));
+            const map = Object.fromEntries(imgs.map(i => [i, [`dodona-${i}.dockerfile`, `dodona-${i}/**`]]));
             core.setOutput('filters', JSON.stringify(map));
 
       - name: Detect changed images
+        if: ${{ github.event_name != 'push' }}
         uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: ${{ steps.genfilters.outputs.filters }}
+
+      - name: Log in to GHCR
+        if: ${{ github.event_name == 'push' }}
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # What a push touched says nothing about what :next holds, so dev asks the
+      # tag instead: every image whose :next is not this commit's state is built.
+      - name: Detect stale images
+        if: ${{ github.event_name == 'push' }}
+        id: stale
+        uses: actions/github-script@v9
+        env:
+          ALL_IMAGES: ${{ steps.images.outputs.images }}
+          OWNER: ${{ github.repository_owner }}
+        with:
+          script: |
+            const all = JSON.parse(process.env.ALL_IMAGES);
+
+            const run = (command, args) =>
+              exec.getExecOutput(command, args, { ignoreReturnCode: true, silent: true });
+
+            // {{json .Image}} carries the config, and with it the labels the build stamped.
+            const revisionOf = async (ref) => {
+              const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Image}}']);
+              if (inspected.exitCode !== 0) {
+                return '';
+              }
+              try {
+                return JSON.parse(inspected.stdout).config?.Labels?.['org.opencontainers.image.revision'] || '';
+              } catch {
+                return '';
+              }
+            };
+
+            const revisions = await Promise.all(all.map(async (image) => ({
+              image,
+              revision: await revisionOf(`ghcr.io/${process.env.OWNER}/dodona-${image}:next`),
+            })));
+
+            // Every branch below that cannot show :next is current builds instead.
+            // A needless build costs one run, a wrong skip leaves :next behind dev
+            // until someone touches the image again. It is also what heals a failed
+            // build: :next keeps the revision of the last one that landed, so the
+            // next push rebuilds what that one did not.
+            const stale = [];
+            for (const { image, revision } of revisions) {
+              if (!revision) {
+                console.log(`${image}: no :next tag, or no revision on it`);
+                stale.push(image);
+                continue;
+              }
+
+              const known = await run('git', ['cat-file', '-e', `${revision}^{commit}`]);
+              if (known.exitCode !== 0) {
+                console.log(`${image}: :next was built from ${revision}, which this repository does not have`);
+                stale.push(image);
+                continue;
+              }
+
+              const since = await run('git', ['rev-list', `${revision}..HEAD`, '--', `dodona-${image}.dockerfile`, `dodona-${image}`]);
+              if (since.exitCode !== 0) {
+                console.log(`${image}: could not list commits since ${revision} (${since.stderr.trim()})`);
+                stale.push(image);
+                continue;
+              }
+
+              const commits = since.stdout.split('\n').filter(Boolean);
+              if (commits.length > 0) {
+                console.log(`${image}: ${commits.length} commit(s) since ${revision}`);
+                stale.push(image);
+                continue;
+              }
+
+              console.log(`${image}: :next is current at ${revision}`);
+            }
+
+            core.setOutput('images', JSON.stringify(stale));
+            console.log('Stale images:', stale);
 
       - name: Set flags
         uses: actions/github-script@v9
@@ -53,16 +150,19 @@ jobs:
         uses: actions/github-script@v9
         id: set-matrix
         env:
-          ALL_IMAGES: ${{ env.IMAGES }}
+          ALL_IMAGES: ${{ steps.images.outputs.images }}
           CHANGED: ${{ steps.filter.outputs.changes }}
+          STALE: ${{ steps.stale.outputs.images }}
           FORCE_ALL: ${{ github.event.inputs.force_all || 'false' }}
           REBUILD_ALL: ${{ steps.flags.outputs.rebuild_all }}
         with:
           script: |
             const all = JSON.parse(process.env.ALL_IMAGES);
-            const changed = JSON.parse(process.env.CHANGED || '[]');
+            const detected = context.eventName === 'push'
+              ? JSON.parse(process.env.STALE || '[]')
+              : JSON.parse(process.env.CHANGED || '[]');
             const forceAll = process.env.FORCE_ALL === 'true' || process.env.REBUILD_ALL === 'true';
-            const selected = forceAll ? all : all.filter(i => changed.includes(i));
+            const selected = forceAll ? all : all.filter(i => detected.includes(i));
             core.setOutput('images', JSON.stringify(selected));
             core.setOutput('has_images', selected.length > 0 ? 'true' : 'false');
             console.log('Selected images:', selected);
@@ -70,6 +170,11 @@ jobs:
   build:
     needs: detect
     if: ${{ needs.detect.outputs.has_images == 'true' }}
+    # Dependabot-triggered runs get an all-read token unless the workflow
+    # states permissions itself, so a bump's candidate push here would fail.
+    permissions:
+      contents: read
+      packages: write
     runs-on: ubuntu-latest
     name: ${{ matrix.image }}
     strategy:
@@ -90,6 +195,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    # A build on dev stages to :next, publish.yml moves it to :latest.
     - name: Set docker tags
       id: meta
       uses: docker/metadata-action@v6
@@ -97,9 +203,8 @@ jobs:
         images: |
           ghcr.io/${{ github.repository_owner }}/dodona-${{ matrix.image }}
         tags: |
-          type=ref,event=branch
           type=ref,event=pr
-          type=raw,value=latest,enable={{is_default_branch}}
+          type=raw,value=next,enable=${{ github.ref_name == 'dev' }}
 
     - name: Build and push (GHCR)
       uses: docker/build-push-action@v7
@@ -112,3 +217,70 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+  # Runs the consumer judge on the exact image built for this pull request.
+  e2e-judge-html:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'html') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-html:pr-${{ github.event.pull_request.number }}
+
+  # Both judges run on the exact image built for this pull request.
+  # judge-pythia is private, and a public repository cannot call a private one's
+  # reusable workflow, so this job checks the judge out with a read-only checkout
+  # key and runs its suite here.
+  e2e-judge-pythia:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
+      options: --user root
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: dodona-edu/judge-pythia
+          ref: master
+          ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+      - name: Save the new output
+        run: .github/workflows/integration-tests . integration-tests integration-tests/generated
+      - name: Compare original and new output
+        run: diff -r integration-tests/expected integration-tests/generated
+
+  e2e-judge-turtle:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
+
+  e2e-universal-judge:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'tested') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/universal-judge/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-tested:pr-${{ github.event.pull_request.number }}
+
+  # Required-check anchor: the gate jobs report different check names when they
+  # run versus when they skip, so rulesets require this job instead.
+  gates:
+    needs: [detect, build, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when a needed job failed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1

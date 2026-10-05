@@ -1,0 +1,19 @@
+# Every judge image this repository builds and publishes.
+- assembly
+- bash
+- c
+- compilers
+- csharp
+- docker
+- haskell
+- html
+- java
+- nextflow
+- nodejs
+- postgres
+- prolog
+- python
+- r
+- scheme
+- sqlite
+- tested
