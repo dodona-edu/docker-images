@@ -370,8 +370,7 @@ jobs:
     permissions:
       contents: read
       packages: read
-    # TODO: switch to @main once dodona-edu/judge-sql merges chore/e2e-workflow.
-    uses: dodona-edu/judge-sql/.github/workflows/e2e.yml@chore/e2e-workflow
+    uses: dodona-edu/judge-sql/.github/workflows/e2e.yml@main
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-sqlite@${{ needs.manifest.outputs.sqlite_next }}
 
