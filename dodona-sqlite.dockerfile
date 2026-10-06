@@ -8,7 +8,7 @@ RUN <<EOF
   # install procps, otherwise pkill cannot be not found
   apt-get -y install --no-install-recommends \
     procps=2:4.0.2-3 \
-    sqlite3=3.40.1-2+deb12u1
+    sqlite3=3.40.1-2+deb12u2
 
   rm -rf /var/lib/apt/lists/*
   apt-get clean
