@@ -1,0 +1,9 @@
+# Source of truth for the Python dependencies pinned into the dodona-sqlite image.
+# dodona-edu/judge-sql carries a copy of this list in its own
+# requirements.txt, and its CI checks that copy against the image.
+pandas==2.1.1
+# Nothing in the judge imports numpy, but the image installs it alongside pandas on purpose:
+# pandas 2.1.1 is built against numpy 1.x, so an unpinned install pulls numpy 2.x and fails at
+# import with "ValueError: numpy.dtype size changed".
+numpy==1.26.4
+sqlparse==0.4.4

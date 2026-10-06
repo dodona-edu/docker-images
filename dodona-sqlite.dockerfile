@@ -1,5 +1,7 @@
 FROM python:3.12.9-slim-bookworm
 
+COPY dodona-sqlite/requirements.txt /requirements.txt
+
 RUN <<EOF
   set -eux
 
@@ -19,10 +21,7 @@ RUN <<EOF
   chown -R runner:runner /home/runner
   chown -R runner:runner /mnt
 
-  pip install --no-cache-dir --upgrade \
-    pandas==2.1.1 \
-    numpy==1.26.4 \
-    sqlparse==0.4.4
+  pip install --no-cache-dir --upgrade -r /requirements.txt
 EOF
 
 USER runner
