@@ -229,6 +229,17 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-html:pr-${{ github.event.pull_request.number }}
 
+  e2e-judge-sql:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'sqlite') }}
+    permissions:
+      contents: read
+      packages: read
+    # TODO: switch to @main once dodona-edu/judge-sql merges chore/e2e-workflow.
+    uses: dodona-edu/judge-sql/.github/workflows/e2e.yml@chore/e2e-workflow
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-sqlite:pr-${{ github.event.pull_request.number }}
+
   # Both judges run on the exact image built for this pull request.
   # judge-pythia is private, and a public repository cannot call a private one's
   # reusable workflow, so this job checks the judge out with a read-only checkout
@@ -277,7 +288,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, build, e2e-judge-html, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
+    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
