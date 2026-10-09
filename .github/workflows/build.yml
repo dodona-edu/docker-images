@@ -118,16 +118,14 @@ jobs:
                 continue;
               }
 
-              const since = await run('git', ['rev-list', `${revision}..HEAD`, '--', `dodona-${image}.dockerfile`, `dodona-${image}`]);
-              if (since.exitCode !== 0) {
-                console.log(`${image}: could not list commits since ${revision} (${since.stderr.trim()})`);
+              const changed = await run('git', ['diff', '--quiet', revision, 'HEAD', '--', `dodona-${image}.dockerfile`, `dodona-${image}`]);
+              if (changed.exitCode === 1) {
+                console.log(`${image}: the image's files changed since ${revision}`);
                 stale.push(image);
                 continue;
               }
-
-              const commits = since.stdout.split('\n').filter(Boolean);
-              if (commits.length > 0) {
-                console.log(`${image}: ${commits.length} commit(s) since ${revision}`);
+              if (changed.exitCode !== 0) {
+                console.log(`${image}: could not compare files since ${revision} (${changed.stderr.trim()})`);
                 stale.push(image);
                 continue;
               }
