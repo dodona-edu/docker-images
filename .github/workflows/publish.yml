@@ -166,14 +166,12 @@ jobs:
                 return `the repository does not have commit ${revision}`;
               }
 
-              const since = await run('git', ['rev-list', `${revision}..HEAD`, '--', ...pathsOf(image)]);
-              if (since.exitCode !== 0) {
-                return `the commits since ${revision} could not be listed (${since.stderr.trim()})`;
+              const changed = await run('git', ['diff', '--quiet', revision, 'HEAD', '--', ...pathsOf(image)]);
+              if (changed.exitCode === 1) {
+                return `the image's files changed since ${revision}`;
               }
-
-              const commits = since.stdout.split('\n').filter(Boolean);
-              if (commits.length > 0) {
-                return `${commits.length} commit(s) landed since ${revision}`;
+              if (changed.exitCode !== 0) {
+                return `the files since ${revision} could not be compared (${changed.stderr.trim()})`;
               }
 
               return '';
