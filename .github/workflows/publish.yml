@@ -37,8 +37,10 @@ jobs:
       html_next: ${{ steps.resolve.outputs.html_next }}
       python_next: ${{ steps.resolve.outputs.python_next }}
       sqlite_next: ${{ steps.resolve.outputs.sqlite_next }}
+      assembly_next: ${{ steps.resolve.outputs.assembly_next }}
       prolog_next: ${{ steps.resolve.outputs.prolog_next }}
       r_next: ${{ steps.resolve.outputs.r_next }}
+      compilers_next: ${{ steps.resolve.outputs.compilers_next }}
       markdown_next: ${{ steps.resolve.outputs.markdown_next }}
       tested_next: ${{ steps.resolve.outputs.tested_next }}
     steps:
@@ -347,8 +349,10 @@ jobs:
             core.setOutput('html_next', pending.find(p => p.image === 'html')?.next || '');
             core.setOutput('python_next', pending.find(p => p.image === 'python')?.next || '');
             core.setOutput('sqlite_next', pending.find(p => p.image === 'sqlite')?.next || '');
+            core.setOutput('assembly_next', pending.find(p => p.image === 'assembly')?.next || '');
             core.setOutput('prolog_next', pending.find(p => p.image === 'prolog')?.next || '');
             core.setOutput('r_next', pending.find(p => p.image === 'r')?.next || '');
+            core.setOutput('compilers_next', pending.find(p => p.image === 'compilers')?.next || '');
             core.setOutput('markdown_next', pending.find(p => p.image === 'markdown')?.next || '');
             core.setOutput('tested_next', pending.find(p => p.image === 'tested')?.next || '');
 
@@ -378,6 +382,16 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-sqlite@${{ needs.manifest.outputs.sqlite_next }}
 
+  e2e-judge-assembly:
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.assembly_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-assembly/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-assembly@${{ needs.manifest.outputs.assembly_next }}
+
   e2e-judge-prolog:
     needs: manifest
     if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.prolog_next != '' }}
@@ -397,6 +411,16 @@ jobs:
     uses: dodona-edu/judge-r/.github/workflows/e2e.yml@master
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-r@${{ needs.manifest.outputs.r_next }}
+
+  e2e-judge-compilers:
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.compilers_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-compilers/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-compilers@${{ needs.manifest.outputs.compilers_next }}
 
   e2e-judge-markdown:
     needs: manifest
@@ -455,7 +479,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   publishable:
-    needs: [manifest, e2e-judge-html, e2e-judge-sql, e2e-judge-prolog, e2e-judge-r, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
+    needs: [manifest, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

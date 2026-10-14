@@ -237,6 +237,16 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-sqlite:pr-${{ github.event.pull_request.number }}
 
+  e2e-judge-assembly:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'assembly') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-assembly/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-assembly:pr-${{ github.event.pull_request.number }}
+
   e2e-judge-prolog:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'prolog') }}
@@ -256,6 +266,16 @@ jobs:
     uses: dodona-edu/judge-r/.github/workflows/e2e.yml@master
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-r:pr-${{ github.event.pull_request.number }}
+
+  e2e-judge-compilers:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'compilers') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-compilers/.github/workflows/e2e.yml@main
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-compilers:pr-${{ github.event.pull_request.number }}
 
   e2e-judge-markdown:
     needs: [detect, build]
@@ -315,7 +335,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-prolog, e2e-judge-r, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
+    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
