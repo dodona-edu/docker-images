@@ -1,6 +1,7 @@
 FROM r-base:4.5.1
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG RENV_VERSION=1.3.1
 
 RUN <<'EOF'
   set -eux
@@ -28,6 +29,7 @@ RUN <<'EOF'
     libnlopt-dev \
     libssl-dev \
     libtiff5-dev \
+    libuv1-dev \
     libxml2-dev
   
   apt-get clean
@@ -39,101 +41,36 @@ RUN <<'EOF'
   mkdir -p /home/runner/workdir
   chown -R runner:runner /home/runner
   chown -R runner:runner /mnt
+EOF
 
-  Rscript -e "withCallingHandlers(install.packages(c( \
-    'AUC' \
-    , 'BART' \
-    , 'BiocManager' \
-    , 'GGally' \
-    , 'HistData' \
-    , 'ISLR2' \
-    , 'ISwR' \
-    , 'MASS' \
-    , 'Matrix' \
-    , 'NHANES' \
-    , 'R6' \
-    , 'RColorBrewer' \
-    , 'ROCR' \
-    , 'RWeka' \
-    , 'Rtsne' \
-    , 'SnowballC' \
-    , 'base64enc' \
-    , 'car' \
-    , 'caret' \
-    , 'clickstream' \
-    , 'coin' \
-    , 'data.table' \
-    , 'devtools' \
-    , 'dplyr' \
-    , 'dummy' \
-    , 'dslabs' \
-    , 'e1071' \
-    , 'ergm' \
-    , 'gam' \
-    , 'gbm' \
-    , 'ggplot2' \
-    , 'ggplotify' \
-    , 'ggrepel' \
-    , 'ggridges' \
-    , 'ggthemes' \
-    , 'glmnet' \
-    , 'gridBase' \
-    , 'gridGraphics' \
-    , 'gridExtra' \
-    , 'httr' \
-    , 'httr2' \
-    , 'igraph' \
-    , 'iml' \
-    , 'intergraph' \
-    , 'irlba' \
-    , 'jsonlite' \
-    , 'kableExtra' \
-    , 'lattice' \
-    , 'latticeExtra' \
-    , 'leaps' \
-    , 'lexicon' \
-    , 'lubridate' \
-    , 'multcomp' \
-    , 'node2vec' \
-    , 'plotrix' \
-    , 'pls' \
-    , 'polite' \
-    , 'qdap' \
-    , 'randomForest' \
-    , 'reshape2' \
-    , 'rvest' \
-    , 'scales' \
-    , 'scatterplot3d' \
-    , 'sentimentr' \
-    , 'skimr' \
-    , 'slam' \
-    , 'sna' \
-    , 'sp' \
-    , 'statnet' \
-    , 'survival' \
-    , 'text2vec' \
-    , 'textclean' \
-    , 'textstem' \
-    , 'tictoc' \
-    , 'tidytext' \
-    , 'tidyverse' \
-    , 'tm' \
-    , 'topicdoc' \
-    , 'topicmodels' \
-    , 'tree' \
-    , 'udpipe' \
-    , 'vader' \
-    , 'wordcloud' \
-    , 'wordcloud2' \
-    )), warning = function(w) stop(w))" \
-    -e "library(devtools)" \
-    -e "devtools::install_github('DougLuke/UserNetR')"
+RUN <<'EOF'
+  set -eux
 
-  Rscript -e "install.packages('remotes', repos='https://cloud.r-project.org')"
-  # coxed archived — last CRAN version 0.3.3 (2020-08-02)
-  Rscript -e "remotes::install_version('coxed', version='0.3.3', repos='https://cran.r-project.org', dependencies=TRUE)"
-  # rtweet archived — last CRAN version 2.0.0 (2024-02-24)
-  Rscript -e "remotes::install_version('rtweet', version='2.0.0', repos='https://cran.r-project.org', dependencies=TRUE)"
+  # CRAN moves a release under Archive/ once a newer one ships.
+  wget -q -P /tmp "https://cloud.r-project.org/src/contrib/renv_${RENV_VERSION}.tar.gz" \
+    || wget -q -P /tmp "https://cloud.r-project.org/src/contrib/Archive/renv/renv_${RENV_VERSION}.tar.gz"
+  R CMD INSTALL "/tmp/renv_${RENV_VERSION}.tar.gz"
+  rm "/tmp/renv_${RENV_VERSION}.tar.gz"
+EOF
+
+COPY dodona-r/ /requirements/
+
+RUN <<'EOF'
+  set -eux
+
+  # renv's cache would leave the packages symlinked into root's home, which runner cannot read.
+  # R's own library already holds the recommended packages, so restore only fills the site library.
+  RENV_CONFIG_CACHE_ENABLED=FALSE RENV_CONFIG_INSTALL_JOBS="$(nproc)" Rscript -e "renv::restore( \
+    project = '/requirements', \
+    library = c('/usr/local/lib/R/site-library', '/usr/lib/R/site-library', '/usr/lib/R/library'), \
+    prompt = FALSE)"
+  rm -rf /root/.cache/R
+
+  # Fail when the image is out of step with the lock, renv itself included.
+  Rscript -e "pkgs <- jsonlite::read_json('/requirements/renv.lock')\$Packages; \
+    bad <- Filter(function(p) !identical(packageDescription(p\$Package, fields = 'Version'), p\$Version), pkgs); \
+    for (p in bad) message(p\$Package, ': locked ', p\$Version); \
+    if (length(bad)) stop('image does not match renv.lock')"
 EOF
 
 USER runner
