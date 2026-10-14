@@ -1,0 +1,4 @@
+# Source of truth for the Python dependencies pinned into the dodona-assembly image.
+# dodona-edu/judge-assembly carries a copy of this list in its own
+# requirements.txt, and its CI checks that copy against the image.
+Mako==1.2.4
