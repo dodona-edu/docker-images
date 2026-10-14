@@ -1,7 +1,21 @@
-FROM r-base:4.5.1
+# dodona-r/update-lock.R runs in this stage.
+FROM r-base:4.5.1 AS renv
+
+ARG RENV_VERSION=1.3.1
+
+RUN <<'EOF'
+  set -eux
+
+  # CRAN moves a release under Archive/ once a newer one ships.
+  wget -q -P /tmp "https://cloud.r-project.org/src/contrib/renv_${RENV_VERSION}.tar.gz" \
+    || wget -q -P /tmp "https://cloud.r-project.org/src/contrib/Archive/renv/renv_${RENV_VERSION}.tar.gz"
+  R CMD INSTALL "/tmp/renv_${RENV_VERSION}.tar.gz"
+  rm "/tmp/renv_${RENV_VERSION}.tar.gz"
+EOF
+
+FROM renv
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG RENV_VERSION=1.3.1
 
 RUN <<'EOF'
   set -eux
@@ -43,16 +57,6 @@ RUN <<'EOF'
   chown -R runner:runner /mnt
 EOF
 
-RUN <<'EOF'
-  set -eux
-
-  # CRAN moves a release under Archive/ once a newer one ships.
-  wget -q -P /tmp "https://cloud.r-project.org/src/contrib/renv_${RENV_VERSION}.tar.gz" \
-    || wget -q -P /tmp "https://cloud.r-project.org/src/contrib/Archive/renv/renv_${RENV_VERSION}.tar.gz"
-  R CMD INSTALL "/tmp/renv_${RENV_VERSION}.tar.gz"
-  rm "/tmp/renv_${RENV_VERSION}.tar.gz"
-EOF
-
 COPY dodona-r/ /requirements/
 
 RUN <<'EOF'
@@ -60,7 +64,8 @@ RUN <<'EOF'
 
   # renv's cache would leave the packages symlinked into root's home, which runner cannot read.
   # R's own library already holds the recommended packages, so restore only fills the site library.
-  RENV_CONFIG_CACHE_ENABLED=FALSE RENV_CONFIG_INSTALL_JOBS="$(nproc)" Rscript -e "renv::restore( \
+  # PPM has no binaries for this Debian release, so renv must not rewrite the snapshot URL to a binary one.
+  RENV_CONFIG_PPM_ENABLED=FALSE RENV_CONFIG_CACHE_ENABLED=FALSE RENV_CONFIG_INSTALL_JOBS="$(nproc)" Rscript -e "renv::restore( \
     project = '/requirements', \
     library = c('/usr/local/lib/R/site-library', '/usr/lib/R/site-library', '/usr/lib/R/library'), \
     prompt = FALSE)"
