@@ -16,12 +16,12 @@ The docker images used by dodona
 * coxed, polite, rtweet and vader are pinned (`==` in `DESCRIPTION`) at their last release because CRAN archived them; they and UserNetR (a GitHub commit in `Remotes`) keep their lock record when the lock is regenerated
 * bindrcpp, covr, maps, spelling, vcr and webshot stay listed because coxed's and rtweet's old `dependencies = TRUE` installs pulled them in
 
-To add, remove or bump packages, edit `dodona-r/DESCRIPTION` if needed, then regenerate the lock from a snapshot date (usually today's) without installing anything:
+Dependabot's r-base bump fails the build's lock check, because the new R ships other recommended packages: run the command below with that day's date on its branch. Between R releases, run it by hand to add, remove or bump packages, after editing `dodona-r/DESCRIPTION` if needed. It regenerates the lock from the snapshot of `<date>` (YYYY-MM-DD) without installing anything:
 
 ```sh
 docker run --rm -v "$PWD/dodona-r:/requirements" -w /requirements \
   "$(docker build -q --target renv -f dodona-r.dockerfile .)" \
-  Rscript update-lock.R 2026-10-13
+  Rscript update-lock.R <date>
 ```
 
 A new date bumps every package to its version on that day. If CRAN archived a package since the last date, the script stops: pin it at the version the lock holds.

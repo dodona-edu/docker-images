@@ -75,7 +75,7 @@ RUN <<'EOF'
   Rscript -e "pkgs <- jsonlite::read_json('/requirements/renv.lock')\$Packages; \
     bad <- Filter(function(p) !identical(packageDescription(p\$Package, fields = 'Version'), p\$Version), pkgs); \
     for (p in bad) message(p\$Package, ': locked ', p\$Version); \
-    if (length(bad)) stop('image does not match renv.lock')"
+    if (length(bad)) stop('image does not match renv.lock; regenerate it with dodona-r/update-lock.R as the README says')"
 EOF
 
 USER runner
