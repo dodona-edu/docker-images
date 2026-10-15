@@ -1,0 +1,98 @@
+#!/bin/bash
+# Usage: smoke-test <judge dir> <image>
+# Runs the Scheme judge in the image the way Dodona's submission runner does,
+# once per exercise and kind of submission, and asserts on its JSON.
+set -u
+
+if [ $# -ne 2 ]; then
+  echo "Usage: $0 <judge dir> <image>" >&2
+  exit 2
+fi
+
+judge=$(cd "$1" && pwd)
+image=$2
+here=$(cd "$(dirname "$0")" && pwd)
+failures=0
+
+# Prints the config Dodona sends: runner defaults, then the exercise's merged
+# dirconfig.json (its parent directory's) and config.json evaluation settings,
+# then the mounted paths.
+build_config() {
+  local exercise=$1
+  jq -n \
+    --slurpfile dir "$(dirname "$exercise")/dirconfig.json" \
+    --slurpfile own "$exercise/config.json" \
+    '{memory_limit: 256000000, time_limit: 42, network_enabled: false}
+     * (($dir[0] * $own[0]).evaluation // {})
+     * {programming_language: "scheme",
+        natural_language: "en",
+        resources: "/mnt/hidden/resources",
+        source: "/mnt/hidden/submission/source",
+        judge: "/mnt/hidden/judge",
+        workdir: "/home/runner/workdir"}'
+}
+
+# run_judge <exercise dir> <submission file>: prints the judge's stdout.
+run_judge() {
+  local exercise=$1 source=$2 tmp config
+  tmp=$(mktemp -d)
+  mkdir -p "$tmp/workdir" "$tmp/hidden/submission" "$tmp/hidden/resources"
+  cp "$source" "$tmp/hidden/submission/source"
+  cp -R "$exercise/evaluation/." "$tmp/hidden/resources/"
+  cp -R "$judge" "$tmp/hidden/judge"
+  # The container's runner user has another uid than the host user.
+  chmod -R a+rX "$tmp"
+  chmod 777 "$tmp/workdir"
+
+  config=$(build_config "$exercise")
+  if [ -n "${DRY_RUN:-}" ]; then
+    echo "$config"
+    rm -rf "$tmp"
+    return
+  fi
+
+  echo "$config" | timeout 60 docker run --rm -i \
+    --memory "$(jq .memory_limit <<<"$config")" \
+    --pids-limit 256 \
+    --network none \
+    -v "$tmp:/mnt" \
+    -v "$tmp/workdir:/home/runner/workdir" \
+    "$image" /main.sh /mnt/hidden/judge/run 2>"$tmp/stderr.log" \
+    || echo "container exited with status $?" >>"$tmp/stderr.log"
+  sed 's/^/stderr: /' "$tmp/stderr.log" >&2
+  rm -rf "$tmp"
+}
+
+# check <name> <exercise dir> <submission file> <jq filter>
+check() {
+  local name=$1 exercise=$2 source=$3 filter=$4 output
+  output=$(run_judge "$exercise" "$source")
+  if [ -n "${DRY_RUN:-}" ]; then
+    echo "== $name"
+    echo "$output"
+    return
+  fi
+  if jq -e "$filter" >/dev/null 2>&1 <<<"$output"; then
+    echo "PASS $name"
+  else
+    echo "FAIL $name (expected: $filter)"
+    echo "  | ${output//$'\n'/$'\n'  | }"
+    failures=$((failures + 1))
+  fi
+}
+
+for exercise in "$judge"/example-exercises/*/ "$here"/exercises/*/; do
+  exercise=${exercise%/}
+  name=$(basename "$exercise")
+  check "$name: reference solution is accepted" "$exercise" \
+    "$exercise/solution/solution.rkt" '.accepted == true'
+  check "$name: wrong solution is rejected" "$exercise" \
+    "$here/submissions/$name/wrong.rkt" '.accepted == false'
+  check "$name: unparsable submission is a runtime error" "$exercise" \
+    "$here/submissions/$name/broken.rkt" '.accepted == false and .status == "runtime error"'
+done
+
+if [ "$failures" -ne 0 ]; then
+  echo "$failures case(s) failed"
+  exit 1
+fi
