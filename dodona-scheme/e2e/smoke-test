@@ -1,7 +1,7 @@
 #!/bin/bash
 # Usage: smoke-test <judge dir> <image>
 # Runs the Scheme judge in the image the way Dodona's submission runner does,
-# once per example exercise and kind of submission, and asserts on its JSON.
+# once per exercise and kind of submission, and asserts on its JSON.
 set -u
 
 if [ $# -ne 2 ]; then
@@ -15,11 +15,12 @@ here=$(cd "$(dirname "$0")" && pwd)
 failures=0
 
 # Prints the config Dodona sends: runner defaults, then the exercise's merged
-# dirconfig.json and config.json evaluation settings, then the mounted paths.
+# dirconfig.json (its parent directory's) and config.json evaluation settings,
+# then the mounted paths.
 build_config() {
   local exercise=$1
   jq -n \
-    --slurpfile dir "$judge/example-exercises/dirconfig.json" \
+    --slurpfile dir "$(dirname "$exercise")/dirconfig.json" \
     --slurpfile own "$exercise/config.json" \
     '{memory_limit: 256000000, time_limit: 42, network_enabled: false}
      * (($dir[0] * $own[0]).evaluation // {})
@@ -80,7 +81,7 @@ check() {
   fi
 }
 
-for exercise in "$judge"/example-exercises/*/; do
+for exercise in "$judge"/example-exercises/*/ "$here"/exercises/*/; do
   exercise=${exercise%/}
   name=$(basename "$exercise")
   check "$name: reference solution is accepted" "$exercise" \

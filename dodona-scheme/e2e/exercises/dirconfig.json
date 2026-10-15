@@ -1,0 +1,9 @@
+{
+  "type": "exercise",
+  "programming_language": "scheme",
+  "access": "private",
+  "evaluation": {
+    "handler": "scheme",
+    "scheme_standard": "r5rs"
+  }
+}
