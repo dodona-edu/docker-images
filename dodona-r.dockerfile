@@ -1,5 +1,5 @@
 # dodona-r/update-lock.R runs in this stage.
-FROM r-base:4.5.1 AS renv
+FROM r-base:4.6.1 AS renv
 
 ARG RENV_VERSION=1.3.1
 
