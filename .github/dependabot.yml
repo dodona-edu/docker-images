@@ -24,6 +24,9 @@ updates:
     versions:
     - ">= 8.1.a"
     - "< 8.2"
+  - dependency-name: haskell
+    versions:
+    - ">= 9.13"
 # One requirements.txt per image, so a bump gets verified against the candidate image.
 - package-ecosystem: pip
   directories:
