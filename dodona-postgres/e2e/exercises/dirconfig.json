@@ -1,0 +1,17 @@
+{
+  "type": "exercise",
+  "access": "private",
+  "evaluation": {
+    "network_enabled": true,
+    "connections": [
+      {
+        "host": "pg",
+        "port": "5432",
+        "dbname": "shop",
+        "username": "student",
+        "password": "student",
+        "schema": "shop"
+      }
+    ]
+  }
+}
