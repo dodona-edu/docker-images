@@ -5,5 +5,5 @@ psutil==7.2.2  # from TESTed running on this image, before dodona-tested existed
 pydantic==2.13.4  # fossil of an older TESTed, current TESTed dropped it
 pyhumps==3.8.0  # fossil of an older TESTed, current TESTed dropped it
 pyshp==3.0.9  # possibly imported by geo exercises, which we cannot scan
-setuptools==82.0.1  # pkg_resources era, exercises might still import it
+setuptools==84.0.0  # pkg_resources era, exercises might still import it
 typing-inspect==0.9.0  # from TESTed running on this image, before dodona-tested existed
