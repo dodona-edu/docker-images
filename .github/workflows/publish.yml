@@ -39,6 +39,7 @@ jobs:
       sqlite_next: ${{ steps.resolve.outputs.sqlite_next }}
       assembly_next: ${{ steps.resolve.outputs.assembly_next }}
       prolog_next: ${{ steps.resolve.outputs.prolog_next }}
+      haskell_next: ${{ steps.resolve.outputs.haskell_next }}
       scheme_next: ${{ steps.resolve.outputs.scheme_next }}
       r_next: ${{ steps.resolve.outputs.r_next }}
       compilers_next: ${{ steps.resolve.outputs.compilers_next }}
@@ -352,6 +353,7 @@ jobs:
             core.setOutput('sqlite_next', pending.find(p => p.image === 'sqlite')?.next || '');
             core.setOutput('assembly_next', pending.find(p => p.image === 'assembly')?.next || '');
             core.setOutput('prolog_next', pending.find(p => p.image === 'prolog')?.next || '');
+            core.setOutput('haskell_next', pending.find(p => p.image === 'haskell')?.next || '');
             core.setOutput('scheme_next', pending.find(p => p.image === 'scheme')?.next || '');
             core.setOutput('r_next', pending.find(p => p.image === 'r')?.next || '');
             core.setOutput('compilers_next', pending.find(p => p.image === 'compilers')?.next || '');
@@ -403,6 +405,16 @@ jobs:
     uses: dodona-edu/judge-prolog/.github/workflows/e2e.yml@master
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-prolog@${{ needs.manifest.outputs.prolog_next }}
+
+  e2e-judge-haskell:
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.haskell_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-haskell/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-haskell@${{ needs.manifest.outputs.haskell_next }}
 
   e2e-judge-scheme:
     needs: manifest
@@ -491,7 +503,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   publishable:
-    needs: [manifest, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
+    needs: [manifest, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
