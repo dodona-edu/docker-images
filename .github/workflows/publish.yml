@@ -137,6 +137,7 @@ jobs:
             const digestOf = async (ref) => {
               const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Manifest}}']);
               if (inspected.exitCode !== 0) {
+                console.log(`${ref}: imagetools inspect failed (exit ${inspected.exitCode}): ${inspected.stderr.trim()}`);
                 return '';
               }
               try {
@@ -150,6 +151,7 @@ jobs:
             const revisionOf = async (ref) => {
               const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Image}}']);
               if (inspected.exitCode !== 0) {
+                console.log(`${ref}: imagetools inspect failed (exit ${inspected.exitCode}): ${inspected.stderr.trim()}`);
                 return '';
               }
               try {
