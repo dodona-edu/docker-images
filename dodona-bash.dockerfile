@@ -1,5 +1,7 @@
 FROM python:3.13.2-slim-bookworm
 
+COPY dodona-bash/requirements.txt /requirements.txt
+
 RUN  <<EOF
   set -eux
 
@@ -35,9 +37,7 @@ RUN  <<EOF
   rm -rf /var/lib/apt/lists/*
   apt-get clean
 
-  # Judge dependencies
-  pip install --no-cache-dir --upgrade pygments==2.11.2
-  pip install --no-cache-dir --upgrade html2image==2.0.4.3
+  pip install --no-cache-dir --upgrade -r /requirements.txt
 
   chmod 711 /mnt
   useradd -m runner
