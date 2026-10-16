@@ -257,6 +257,16 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-prolog:pr-${{ github.event.pull_request.number }}
 
+  e2e-judge-haskell:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'haskell') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-haskell/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-haskell:pr-${{ github.event.pull_request.number }}
+
   e2e-judge-scheme:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'scheme') }}
@@ -322,6 +332,26 @@ jobs:
       - name: Compare original and new output
         run: diff -r integration-tests/expected integration-tests/generated
 
+  # judge-bash is private, so this job checks it out with a read-only checkout key. The image
+  # ships no ssh client, so the checkout runs on the runner and the suite in the image.
+  e2e-judge-bash:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'bash') }}
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: dodona-edu/judge-bash
+          ref: master
+          ssh-key: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
+      - name: Run the judge-bash suite
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-bash:pr-${{ github.event.pull_request.number }}
+        run: ./devel/run-tests-in-image.sh
+
   e2e-judge-turtle:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
@@ -345,7 +375,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
+    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

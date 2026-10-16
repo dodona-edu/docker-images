@@ -39,11 +39,13 @@ jobs:
       sqlite_next: ${{ steps.resolve.outputs.sqlite_next }}
       assembly_next: ${{ steps.resolve.outputs.assembly_next }}
       prolog_next: ${{ steps.resolve.outputs.prolog_next }}
+      haskell_next: ${{ steps.resolve.outputs.haskell_next }}
       scheme_next: ${{ steps.resolve.outputs.scheme_next }}
       r_next: ${{ steps.resolve.outputs.r_next }}
       compilers_next: ${{ steps.resolve.outputs.compilers_next }}
       markdown_next: ${{ steps.resolve.outputs.markdown_next }}
       tested_next: ${{ steps.resolve.outputs.tested_next }}
+      bash_next: ${{ steps.resolve.outputs.bash_next }}
     steps:
       # A dev build in flight is about to replace :next, so the digests resolved
       # below would certify an image the merge will not ship. Every merge to dev
@@ -352,11 +354,13 @@ jobs:
             core.setOutput('sqlite_next', pending.find(p => p.image === 'sqlite')?.next || '');
             core.setOutput('assembly_next', pending.find(p => p.image === 'assembly')?.next || '');
             core.setOutput('prolog_next', pending.find(p => p.image === 'prolog')?.next || '');
+            core.setOutput('haskell_next', pending.find(p => p.image === 'haskell')?.next || '');
             core.setOutput('scheme_next', pending.find(p => p.image === 'scheme')?.next || '');
             core.setOutput('r_next', pending.find(p => p.image === 'r')?.next || '');
             core.setOutput('compilers_next', pending.find(p => p.image === 'compilers')?.next || '');
             core.setOutput('markdown_next', pending.find(p => p.image === 'markdown')?.next || '');
             core.setOutput('tested_next', pending.find(p => p.image === 'tested')?.next || '');
+            core.setOutput('bash_next', pending.find(p => p.image === 'bash')?.next || '');
 
             if (blocking.length > 0 && context.eventName === 'pull_request') {
               core.setFailed(`${blocking.join(', ')} would not publish safely, see the manifest above for why.`);
@@ -403,6 +407,16 @@ jobs:
     uses: dodona-edu/judge-prolog/.github/workflows/e2e.yml@master
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-prolog@${{ needs.manifest.outputs.prolog_next }}
+
+  e2e-judge-haskell:
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.haskell_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-haskell/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-haskell@${{ needs.manifest.outputs.haskell_next }}
 
   e2e-judge-scheme:
     needs: manifest
@@ -468,6 +482,26 @@ jobs:
       - name: Compare original and new output
         run: diff -r integration-tests/expected integration-tests/generated
 
+  # judge-bash is private, so this job checks it out with a read-only checkout key. The image
+  # ships no ssh client, so the checkout runs on the runner and the suite in the image.
+  e2e-judge-bash:
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.bash_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: dodona-edu/judge-bash
+          ref: master
+          ssh-key: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
+      - name: Run the judge-bash suite
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-bash@${{ needs.manifest.outputs.bash_next }}
+        run: ./devel/run-tests-in-image.sh
+
   e2e-judge-turtle:
     needs: manifest
     if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.python_next != '' }}
@@ -491,7 +525,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   publishable:
-    needs: [manifest, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-turtle, e2e-universal-judge]
+    needs: [manifest, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

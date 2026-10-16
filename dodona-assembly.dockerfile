@@ -1,4 +1,4 @@
-FROM python:3.12.15-slim-bookworm
+FROM python:3.15.0-slim-bookworm
 
 COPY dodona-assembly/requirements.txt /requirements.txt
 
@@ -32,7 +32,7 @@ RUN dpkg --add-architecture armhf \
  && rm -rf /var/lib/apt/lists/* \
  # Judge Python dependencies
  && pip install --no-cache-dir --upgrade -r /requirements.txt \
- # qemu 8.0's bundled Meson needs distutils, which Python 3.12 only gets from setuptools
+ # qemu 8.0's bundled Meson needs distutils, which Python 3.12+ only gets from setuptools
  && pip install --no-cache-dir setuptools==72.1.0 \
  # Fetch packages
  && curl -o qemu.tar.xz https://download.qemu.org/qemu-${QEMU_VERSION}.tar.xz \

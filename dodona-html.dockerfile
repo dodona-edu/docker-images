@@ -1,4 +1,4 @@
-FROM python:3.14.8-slim-bookworm
+FROM python:3.15.0-slim-bookworm
 
 COPY dodona-html/requirements.txt /requirements.txt
 
