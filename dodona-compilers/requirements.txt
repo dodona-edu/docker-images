@@ -2,4 +2,4 @@
 # dodona-edu/judge-compilers carries a copy of this list in its own
 # requirements.txt, and its CI checks that copy against the image.
 lit==18.1.8
-psutil==7.0.0
+psutil==7.2.2
