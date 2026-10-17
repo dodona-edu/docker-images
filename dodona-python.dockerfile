@@ -1,4 +1,4 @@
-FROM python:3.12.9-bookworm
+FROM python:3.12.15-bookworm
 
 COPY dodona-python/ /requirements/
 
