@@ -1,4 +1,4 @@
-FROM python:3.13.2-slim-bookworm
+FROM python:3.15.0-slim-trixie
 
 COPY dodona-bash/requirements.txt /requirements.txt
 
