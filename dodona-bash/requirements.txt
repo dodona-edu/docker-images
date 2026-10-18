@@ -2,4 +2,3 @@
 # dodona-edu/judge-bash carries a copy of this list in its own requirements.txt,
 # and its CI checks that copy against the image.
 html2image==2.0.7
-pygments==2.11.2
