@@ -1,4 +1,4 @@
-FROM python:3.13.2-slim-bookworm
+FROM python:3.15.0-slim-trixie
 
 COPY dodona-bash/requirements.txt /requirements.txt
 
@@ -12,12 +12,10 @@ RUN  <<EOF
     binutils \
     bsdmainutils \
     cowsay \
-    chromium \
     curl \
     ed \
     figlet \
     file \
-    fonts-noto-color-emoji \
     fortune-mod \
     git \
     gcc \
