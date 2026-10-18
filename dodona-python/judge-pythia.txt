@@ -2,3 +2,4 @@
 # checks it against the image in its own CI.
 jsonschema==4.26.0
 pylint==4.0.5
+ruff==0.17.0
