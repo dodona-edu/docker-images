@@ -12,12 +12,10 @@ RUN  <<EOF
     binutils \
     bsdmainutils \
     cowsay \
-    chromium \
     curl \
     ed \
     figlet \
     file \
-    fonts-noto-color-emoji \
     fortune-mod \
     git \
     gcc \
