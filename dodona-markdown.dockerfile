@@ -1,7 +1,7 @@
 FROM alpine:3.24.2
 
 # The judge builds its feedback with jq
-RUN apk add --no-cache jq=1.8.2-r0 \
+RUN apk add --no-cache jq \
  # Make sure the students can't find our secret path, which is mounted in
  # /mnt with a secure random name.
  && chmod 711 /mnt \
