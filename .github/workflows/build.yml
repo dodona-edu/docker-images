@@ -300,6 +300,16 @@ jobs:
     secrets:
       PGJUDGE_DEPLOY_TOKEN: ${{ secrets.PGJUDGE_DEPLOY_TOKEN }}
 
+  e2e-judge-c:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'c') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/e2e-judge-c.yml
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-c:pr-${{ github.event.pull_request.number }}
+
   e2e-judge-r:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'r') }}
@@ -417,7 +427,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-postgres, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-java, e2e-judge-csharp, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
+    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-postgres, e2e-judge-c, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-java, e2e-judge-csharp, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
