@@ -27,15 +27,73 @@ updates:
   - dependency-name: haskell
     versions:
     - ">= 9.13"
-# One requirements.txt per image, so a bump gets verified against the candidate image.
+# One entry per image, so each image's bumps arrive as one PR, verified against that image's candidate build.
 - package-ecosystem: pip
-  directories:
-  - "/dodona-*"
+  directory: "/dodona-assembly"
   schedule:
     interval: monthly
     time: "13:00"
     timezone: Europe/Brussels
   open-pull-requests-limit: 99
+  groups:
+    dodona-assembly:
+      patterns:
+      - "*"
+- package-ecosystem: pip
+  directory: "/dodona-bash"
+  schedule:
+    interval: monthly
+    time: "13:00"
+    timezone: Europe/Brussels
+  open-pull-requests-limit: 99
+  groups:
+    dodona-bash:
+      patterns:
+      - "*"
+- package-ecosystem: pip
+  directory: "/dodona-compilers"
+  schedule:
+    interval: monthly
+    time: "13:00"
+    timezone: Europe/Brussels
+  open-pull-requests-limit: 99
+  groups:
+    dodona-compilers:
+      patterns:
+      - "*"
+- package-ecosystem: pip
+  directory: "/dodona-html"
+  schedule:
+    interval: monthly
+    time: "13:00"
+    timezone: Europe/Brussels
+  open-pull-requests-limit: 99
+  groups:
+    dodona-html:
+      patterns:
+      - "*"
+- package-ecosystem: pip
+  directory: "/dodona-python"
+  schedule:
+    interval: monthly
+    time: "13:00"
+    timezone: Europe/Brussels
+  open-pull-requests-limit: 99
+  groups:
+    dodona-python:
+      patterns:
+      - "*"
+- package-ecosystem: pip
+  directory: "/dodona-sqlite"
+  schedule:
+    interval: monthly
+    time: "13:00"
+    timezone: Europe/Brussels
+  open-pull-requests-limit: 99
+  groups:
+    dodona-sqlite:
+      patterns:
+      - "*"
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
