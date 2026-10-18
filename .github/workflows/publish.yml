@@ -44,6 +44,7 @@ jobs:
       r_next: ${{ steps.resolve.outputs.r_next }}
       compilers_next: ${{ steps.resolve.outputs.compilers_next }}
       markdown_next: ${{ steps.resolve.outputs.markdown_next }}
+      java_next: ${{ steps.resolve.outputs.java_next }}
       tested_next: ${{ steps.resolve.outputs.tested_next }}
       bash_next: ${{ steps.resolve.outputs.bash_next }}
     steps:
@@ -361,6 +362,7 @@ jobs:
             core.setOutput('r_next', pending.find(p => p.image === 'r')?.next || '');
             core.setOutput('compilers_next', pending.find(p => p.image === 'compilers')?.next || '');
             core.setOutput('markdown_next', pending.find(p => p.image === 'markdown')?.next || '');
+            core.setOutput('java_next', pending.find(p => p.image === 'java')?.next || '');
             core.setOutput('tested_next', pending.find(p => p.image === 'tested')?.next || '');
             core.setOutput('bash_next', pending.find(p => p.image === 'bash')?.next || '');
 
@@ -460,6 +462,16 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-markdown@${{ needs.manifest.outputs.markdown_next }}
 
+  e2e-judge-java:
+    needs: manifest
+    if: ${{ github.event_name == 'pull_request' && needs.manifest.outputs.java_next != '' }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-java/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-java@${{ needs.manifest.outputs.java_next }}
+
   # judge-pythia is private, and a public repository cannot call a private one's
   # reusable workflow, so this job checks the judge out with a read-only checkout
   # key and runs its suite here.
@@ -527,7 +539,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   publishable:
-    needs: [manifest, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
+    needs: [manifest, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-java, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
