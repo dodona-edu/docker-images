@@ -11,6 +11,9 @@ on:
   # Produces the pending report on demand, it never retags.
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   # Every run that retags waits its turn in ship, and queue: max is what keeps a
   # waiting one from being dropped by the next push or dispatch. It rules out
@@ -491,6 +494,7 @@ jobs:
           repository: dodona-edu/judge-pythia
           ref: master
           ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+          persist-credentials: false
       - name: Save the new output
         run: .github/workflows/integration-tests . integration-tests integration-tests/generated
       - name: Compare original and new output
@@ -511,6 +515,7 @@ jobs:
           repository: dodona-edu/judge-bash
           ref: master
           ssh-key: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
+          persist-credentials: false
       - name: Run the judge-bash suite
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-bash@${{ needs.manifest.outputs.bash_next }}

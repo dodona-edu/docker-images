@@ -2,6 +2,9 @@ name: Lint
 
 on: [push]
 
+permissions:
+  contents: read
+
 jobs:
   # A matrix cannot read a file, so the image list comes from a job.
   images:
@@ -10,6 +13,8 @@ jobs:
       images: ${{ steps.images.outputs.images }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - id: images
         run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
 
@@ -23,6 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: jbergstroem/hadolint-gh-action@v1
         with:
           dockerfile: dodona-${{ matrix.image }}.dockerfile
