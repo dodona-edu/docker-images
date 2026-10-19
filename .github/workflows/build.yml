@@ -15,6 +15,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 concurrency:
   # Runs that write the same tag take one lane: :next on dev, :pr-N per pull
   # request. queue takes no expression and rules out cancel-in-progress, so a
@@ -24,6 +27,10 @@ concurrency:
 
 jobs:
   detect:
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: read
     runs-on: ubuntu-latest
     outputs:
       images: ${{ steps.set-matrix.outputs.images }}
@@ -33,6 +40,7 @@ jobs:
         with:
           # Staleness reads history back to the commit :next was built from.
           fetch-depth: 0
+          persist-credentials: false
 
       - id: images
         run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
@@ -183,6 +191,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
@@ -278,6 +288,18 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-scheme:pr-${{ github.event.pull_request.number }}
 
+  e2e-judge-postgres:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'postgres') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/e2e-judge-postgres.yml
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-postgres:pr-${{ github.event.pull_request.number }}
+    secrets:
+      PGJUDGE_DEPLOY_TOKEN: ${{ secrets.PGJUDGE_DEPLOY_TOKEN }}
+
   e2e-judge-r:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'r') }}
@@ -308,6 +330,16 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-markdown:pr-${{ github.event.pull_request.number }}
 
+  e2e-judge-java:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'java') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-java/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-java:pr-${{ github.event.pull_request.number }}
+
   # Both judges run on the exact image built for this pull request.
   # judge-pythia is private, and a public repository cannot call a private one's
   # reusable workflow, so this job checks the judge out with a read-only checkout
@@ -328,6 +360,7 @@ jobs:
           repository: dodona-edu/judge-pythia
           ref: master
           ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+          persist-credentials: false
       - name: Save the new output
         run: .github/workflows/integration-tests . integration-tests integration-tests/generated
       - name: Compare original and new output
@@ -348,6 +381,7 @@ jobs:
           repository: dodona-edu/judge-bash
           ref: master
           ssh-key: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
+          persist-credentials: false
       - name: Run the judge-bash suite
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-bash:pr-${{ github.event.pull_request.number }}
@@ -376,7 +410,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
+    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-postgres, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-java, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

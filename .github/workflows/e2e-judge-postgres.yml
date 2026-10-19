@@ -1,0 +1,44 @@
+name: E2E judge postgres
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Image to verify the PostgreSQL judge on
+        required: true
+        type: string
+    secrets:
+      PGJUDGE_DEPLOY_TOKEN:
+        description: GitLab deploy token that can read the judge
+        required: true
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The judge lives in a private repository of UGent's DDCM group, not in dodona-edu.
+      - name: Clone the judge
+        run: git clone --depth 1 --branch deploy "https://${TOKEN_USERNAME}:${TOKEN}@gitlab.com/ddcm-education/dodona/pgjudge.git" "$RUNNER_TEMP/judge"
+        env:
+          TOKEN_USERNAME: ${{ vars.PGJUDGE_DEPLOY_TOKEN_USERNAME }}
+          TOKEN: ${{ secrets.PGJUDGE_DEPLOY_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run the smoke test
+        run: dodona-postgres/e2e/smoke-test "$RUNNER_TEMP/judge" "$IMAGE"
+        env:
+          IMAGE: ${{ inputs.image }}

@@ -1,0 +1,10 @@
+{
+  "description": {
+    "names": {
+      "en": "Products, any order"
+    }
+  },
+  "evaluation": {
+    "ignoreOrder": true
+  }
+}
