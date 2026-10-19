@@ -1,8 +1,8 @@
 # For student submissions; no judge requires these. Owned by the Dodona team,
 # no repository outside this one keeps a copy.
-biopython==1.87
-lxml==6.1.1
-matplotlib==3.10.9
-numpy==2.4.6
-pandas==3.0.3
+biopython==1.88
+lxml==6.1.3
+matplotlib==3.11.2
+numpy==2.5.4
+pandas==3.0.6
 sortedcontainers==2.4.0
