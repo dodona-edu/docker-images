@@ -3,8 +3,7 @@ The docker images used by dodona
 
 ## dodona-python
 * based on the python image
-* includes pylint
-* includes jsonschema
+* includes ruff
 * shared by judge-pythia and judge-turtle: each judge's packages are in `dodona-python/<judge>.txt`, exercise packages in `exercises.txt`, and every pull request that changes the image runs both judges' suites against the candidate
 
 ## dodona-r
