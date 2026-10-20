@@ -340,6 +340,16 @@ jobs:
     with:
       image: ghcr.io/${{ github.repository_owner }}/dodona-java:pr-${{ github.event.pull_request.number }}
 
+  e2e-judge-csharp:
+    needs: [detect, build]
+    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'csharp') }}
+    permissions:
+      contents: read
+      packages: read
+    uses: dodona-edu/judge-csharp/.github/workflows/e2e.yml@master
+    with:
+      image: ghcr.io/${{ github.repository_owner }}/dodona-csharp:pr-${{ github.event.pull_request.number }}
+
   # Both judges run on the exact image built for this pull request.
   # judge-pythia is private, and a public repository cannot call a private one's
   # reusable workflow, so this job checks the judge out with a read-only checkout
@@ -361,10 +371,11 @@ jobs:
           ref: master
           ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
           persist-credentials: false
-      - name: Save the new output
-        run: .github/workflows/integration-tests . integration-tests integration-tests/generated
-      - name: Compare original and new output
-        run: diff -r integration-tests/expected integration-tests/generated
+      - name: Run judge-pythia's tests in the image
+        env:
+          # judge-pythia's requirements-match-image guards the ruff pin; the test would fail every ruff bump here
+          SKIP_RUFF_VERSION_TEST: 1
+        run: devel/run-tests-in-image.sh
 
   # judge-bash is private, so this job checks it out with a read-only checkout key. The image
   # ships no ssh client, so the checkout runs on the runner and the suite in the image.
@@ -410,7 +421,7 @@ jobs:
   # Required-check anchor: the gate jobs report different check names when they
   # run versus when they skip, so rulesets require this job instead.
   gates:
-    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-postgres, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-java, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
+    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-postgres, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-java, e2e-judge-csharp, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

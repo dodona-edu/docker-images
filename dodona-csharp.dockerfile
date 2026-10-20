@@ -1,38 +1,31 @@
-FROM mono:6.12.0.182
+FROM debian:trixie-slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Fix EOL buster repos + install jshon and time
-RUN set -euxo pipefail; \
-  # Rewrite to archive mirrors (primary mirrors dropped buster)
-  sed -ri \
-    -e 's#http://deb.debian.org/debian#http://archive.debian.org/debian#g' \
-    -e 's#http://deb.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
-    -e 's#http://security.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
-    /etc/apt/sources.list; \
-  # If there are extra list files, rewrite those too (no-op if none)
-  find /etc/apt/sources.list.d -maxdepth 1 -type f -print0 2>/dev/null \
-    | xargs -0 -r sed -ri \
-      -e 's#http://deb.debian.org/debian#http://archive.debian.org/debian#g' \
-      -e 's#http://deb.debian.org/debian-security#http://archive.debian.org/debian-security#g' \
-      -e 's#http://security.debian.org/debian-security#http://archive.debian.org/debian-security#g'; \
-  # Archived suites often have expired metadata; disable date check
-  printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99no-check-valid-until; \
-  apt-get update --allow-releaseinfo-change; \
-  apt-get install -y --no-install-recommends jshon time; \
-  apt-get clean; rm -rf /var/lib/apt/lists/*
+ENV DOTNET_NOLOGO=1
+ENV DOTNET_GENERATE_ASPNET_CERTIFICATE=false
+ENV DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK=true
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ENV DOTNET_RUNNING_IN_CONTAINER=true
 
-# Make sure the students can't find our secret path, which is mounted in
-# /mnt with a secure random name.
-RUN ["chmod", "711", "/mnt"]
-
-# Add the user which will run the student's code and the judge.
-RUN ["useradd", "-m", "runner"]
+# Bump the dotnet-sdk-10.0 pin by hand on .NET patch releases.
+ADD --checksum=sha256:d0c2f69250c6ce0d4c6220b142f999d039a3c560af7f980b943687d106ca8e38 https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb /tmp/packages-microsoft-prod.deb
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && dpkg -i /tmp/packages-microsoft-prod.deb \
+ && rm /tmp/packages-microsoft-prod.deb \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends dotnet-sdk-10.0=10.0.402-1 jshon procps time \
+ && rm -rf /var/lib/apt/lists/* \
+ # Make sure the students can't find our secret path, which is mounted in
+ # /mnt with a secure random name.
+ && chmod 711 /mnt \
+ # Add the user which will run the student's code and the judge.
+ && useradd -m runner
 
 # As the runner user
 USER runner
 RUN ["mkdir", "/home/runner/workdir"]
 
 WORKDIR /home/runner/workdir
-
 COPY main.sh /main.sh
