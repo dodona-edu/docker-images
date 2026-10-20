@@ -18,8 +18,7 @@ RUN <<EOF
   # Judge dependencies
   pip install --no-cache-dir --upgrade \
     -r /requirements/judge-pythia.txt \
-    -r /requirements/judge-turtle.txt \
-    -r /requirements/unclaimed.txt
+    -r /requirements/judge-turtle.txt
 
   # Exercise dependencies
   pip install --no-cache-dir --upgrade -r /requirements/exercises.txt
