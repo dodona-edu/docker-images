@@ -351,9 +351,8 @@ jobs:
       image: ghcr.io/${{ github.repository_owner }}/dodona-csharp:pr-${{ github.event.pull_request.number }}
 
   # Both judges run on the exact image built for this pull request.
-  # judge-pythia is private, and a public repository cannot call a private one's
-  # reusable workflow, so this job checks the judge out with a read-only checkout
-  # key and runs its suite here.
+  # judge-pythia is private, so this job checks it out with a read-only checkout key. The image
+  # ships no git or ssh client, so the checkout runs on the runner and the tests in the image.
   e2e-judge-pythia:
     needs: [detect, build]
     if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
@@ -361,9 +360,6 @@ jobs:
       contents: read
       packages: read
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
-      options: --user root
     steps:
       - uses: actions/checkout@v7
         with:
@@ -373,9 +369,9 @@ jobs:
           persist-credentials: false
       - name: Run judge-pythia's tests in the image
         env:
-          # judge-pythia's requirements-match-image guards the ruff pin; the test would fail every ruff bump here
-          SKIP_RUFF_VERSION_TEST: 1
-        run: devel/run-tests-in-image.sh
+          IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
+        # SKIP_RUFF_VERSION_TEST: judge-pythia's requirements-match-image guards the ruff pin; the test would fail every ruff bump here
+        run: docker run --rm --user root -e SKIP_RUFF_VERSION_TEST=1 -v "$PWD:/judge" -w /judge "$IMAGE" devel/run-tests-in-image.sh
 
   # judge-bash is private, so this job checks it out with a read-only checkout key. The image
   # ships no ssh client, so the checkout runs on the runner and the suite in the image.
