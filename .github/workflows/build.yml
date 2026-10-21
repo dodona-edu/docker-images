@@ -372,6 +372,49 @@ jobs:
           IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
         # SKIP_RUFF_VERSION_TEST: judge-pythia's requirements-match-image guards the ruff pin; the test would fail every ruff bump here
         run: docker run --rm --user root -e SKIP_RUFF_VERSION_TEST=1 -v "$PWD:/judge" -w /judge "$IMAGE" devel/run-tests-in-image.sh
+      # exercises call these tools and libraries; judge-pythia's own tests don't
+      - name: Smoke-test the exercise tools and libraries in the image
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
+        run: |
+          docker run --rm -i "$IMAGE" bash -s <<'SMOKE'
+          set -euo pipefail
+          cd "$(mktemp -d)"
+          printf '>a\nATGGCGTACGTTAGCCTAGGCTAACGTTAGCATCGATCGGATCCATGCAAGCTTGCAT\n' > a.fa
+          printf '>b\nATGGCGTACGATAGCCTAGGCTAACGTAAGCATCGATCGGTTCCATGCAAGCATGCAT\n' > b.fa
+          cat a.fa b.fa > db.fa
+          needle -asequence a.fa -bsequence b.fa -gapopen 10 -gapextend 0.5 -outfile needle.txt
+          water -asequence a.fa -bsequence b.fa -gapopen 10 -gapextend 0.5 -outfile water.txt
+          grep -q '^# Score:' needle.txt
+          grep -q '^# Score:' water.txt
+          fasta36 -q a.fa db.fa > fasta36.txt
+          ssearch36 -q a.fa db.fa > ssearch36.txt
+          grep -q '>>b' fasta36.txt
+          grep -q '>>b' ssearch36.txt
+          python3 - <<'PY'
+          from pathlib import Path
+
+          from Bio import SeqIO
+          from Bio.Align import PairwiseAligner
+          records = list(SeqIO.parse("db.fa", "fasta"))
+          assert [r.id for r in records] == ["a", "b"]
+          assert PairwiseAligner().score(records[0].seq, records[1].seq) > 50
+
+          import numpy as np
+          import pandas as pd
+          assert np.arange(6).reshape(2, 3).sum() == 15
+          assert pd.DataFrame({"x": [1, 2, 3]})["x"].mean() == 2
+
+          import matplotlib
+          matplotlib.use("Agg")
+          import matplotlib.pyplot as plt
+          fig, ax = plt.subplots()
+          ax.plot([1, 2, 3], [1, 4, 9])
+          fig.savefig("plot.png")
+          assert Path("plot.png").read_bytes().startswith(b"\x89PNG")
+          PY
+          echo "smoke test passed"
+          SMOKE
 
   # judge-bash is private, so this job checks it out with a read-only checkout key. The image
   # ships no ssh client, so the checkout runs on the runner and the suite in the image.
