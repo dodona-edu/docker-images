@@ -97,6 +97,7 @@ CFG
     # Haskell dependencies
     apt-get install -y --no-install-recommends \
         hlint \
+        lld \
         autoconf \
         build-essential \
         zlib1g-dev \
@@ -159,6 +160,24 @@ CFG
     useradd -m runner
     mkdir /home/runner/workdir
     chown -R runner:runner /home/runner/workdir
+EOF
+
+# Precompile TESTed's Haskell helper modules with the flags of Haskell.compilation
+# in tested/languages/haskell/config.py: "static" for ghc, "dynamic" for runhaskell
+# (GHCi only loads dynamic objects). TESTed only uses them if these sources match
+# its templates, so rebuild the image when the templates change. Compile in place:
+# -outputdir changes the flags GHC compares.
+ARG TESTED_TEMPLATES=https://raw.githubusercontent.com/dodona-edu/universal-judge/master/tested/languages/haskell/templates
+RUN <<EOF
+    set -eux
+    for way in static dynamic; do
+        mkdir -p "/usr/local/share/tested/haskell/$way"
+        for module in EvaluationUtils Values; do
+            curl -fsSL -o "/usr/local/share/tested/haskell/$way/$module.hs" "$TESTED_TEMPLATES/$module.hs"
+        done
+    done
+    bash -c "cd /usr/local/share/tested/haskell/static && ghc -no-link -fno-cse -fno-full-laziness -O0 EvaluationUtils.hs Values.hs"
+    bash -c "cd /usr/local/share/tested/haskell/dynamic && ghc -no-link -dynamic -fno-cse -fno-full-laziness -O0 EvaluationUtils.hs Values.hs"
 EOF
 
 USER runner
