@@ -91,7 +91,9 @@ CFG
     npm install -g eslint@8.57 abstract-syntax-tree@2.22
 
     # TypeScript dependencies
-    npm install -g typescript@5.6.3 tsx@4.19.2
+    # TypeScript 7 (the Go port) has no JavaScript API: TESTed parses
+    # submissions with TypeScript 6's, installed alongside as tsc6.
+    npm install -g typescript@7.0.2 @typescript/typescript6@6.0.2 tsx@4.19.2
     npm install -g @types/node @typescript-eslint/parser @typescript-eslint/eslint-plugin
 
     # Haskell dependencies
