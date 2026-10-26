@@ -99,6 +99,7 @@ CFG
     # Haskell dependencies
     apt-get install -y --no-install-recommends \
         hlint \
+        lld \
         autoconf \
         build-essential \
         zlib1g-dev \
@@ -161,6 +162,27 @@ CFG
     useradd -m runner
     mkdir /home/runner/workdir
     chown -R runner:runner /home/runner/workdir
+EOF
+
+# Precompile TESTed's Haskell helper modules with the flags of Haskell.compilation
+# in tested/languages/haskell/config.py: "static" for ghc, "dynamic" for runhaskell
+# (GHCi only loads dynamic objects). TESTed only uses them if these sources match
+# its templates. ADD keys the build cache on the downloaded content, so the next
+# image build recompiles them after a template change (a RUN curl stays cached).
+# The judge reads them as runner, but a remote ADD writes mode 600, and
+# ADD --chmod=644 would also set the directories it creates to 644.
+# Compile in place: -outputdir changes the flags GHC compares.
+ARG TESTED_TEMPLATES=https://raw.githubusercontent.com/dodona-edu/universal-judge/master/tested/languages/haskell/templates
+# DL3020: hadolint does not see that ${TESTED_TEMPLATES} is a URL.
+# hadolint ignore=DL3020
+ADD ${TESTED_TEMPLATES}/EvaluationUtils.hs ${TESTED_TEMPLATES}/Values.hs /usr/local/share/tested/haskell/static/
+RUN <<EOF
+    set -eux
+    chmod 644 /usr/local/share/tested/haskell/static/*.hs
+    mkdir /usr/local/share/tested/haskell/dynamic
+    cp /usr/local/share/tested/haskell/static/*.hs /usr/local/share/tested/haskell/dynamic/
+    bash -c "cd /usr/local/share/tested/haskell/static && ghc -no-link -fno-cse -fno-full-laziness -O0 EvaluationUtils.hs Values.hs"
+    bash -c "cd /usr/local/share/tested/haskell/dynamic && ghc -no-link -dynamic -fno-cse -fno-full-laziness -O0 EvaluationUtils.hs Values.hs"
 EOF
 
 USER runner
