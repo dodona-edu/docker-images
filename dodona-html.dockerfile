@@ -1,4 +1,4 @@
-FROM python:3.15.0-slim-bookworm
+FROM python:3.15.0-slim-trixie
 
 COPY dodona-html/requirements.txt /requirements.txt
 
@@ -9,7 +9,7 @@ RUN <<EOF
 
   # install procps, otherwise pkill cannot be not found
   apt-get -y install --no-install-recommends \
-    procps=2:4.0.2-3
+    procps
 
   rm -rf /var/lib/apt/lists/*
   apt-get clean

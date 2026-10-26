@@ -1,4 +1,4 @@
-FROM python:3.15.0-trixie
+FROM python:3.15.0-slim-trixie
 
 COPY dodona-python/ /requirements/
 
@@ -10,10 +10,9 @@ RUN <<EOF
     emboss \
     fasta3 \
     fontconfig \
-    libc6-dev \
-    libcairo2-dev \
-    procps \
-    zlib1g-dev
+    libcairo2 \
+    libtk8.6 \
+    procps
 
   # Judge dependencies
   pip install --no-cache-dir --upgrade \

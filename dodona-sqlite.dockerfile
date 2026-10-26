@@ -9,7 +9,7 @@ RUN <<EOF
 
   # install procps, otherwise pkill cannot be not found
   apt-get -y install --no-install-recommends \
-    procps=2:4.0.4-9 \
+    procps \
     sqlite3=3.46.1-7+deb13u2
 
   rm -rf /var/lib/apt/lists/*
