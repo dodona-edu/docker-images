@@ -171,6 +171,8 @@ EOF
 # ADD --chmod=644 would also set the directories it creates to 644.
 # Compile in place: -outputdir changes the flags GHC compares.
 ARG TESTED_TEMPLATES=https://raw.githubusercontent.com/dodona-edu/universal-judge/master/tested/languages/haskell/templates
+# DL3020: hadolint does not see that ${TESTED_TEMPLATES} is a URL.
+# hadolint ignore=DL3020
 ADD ${TESTED_TEMPLATES}/EvaluationUtils.hs ${TESTED_TEMPLATES}/Values.hs /usr/local/share/tested/haskell/static/
 RUN <<EOF
     set -eux
