@@ -5,7 +5,7 @@
 # It should not contain any development tools or dependencies.
 # Add those to dev-dependencies.sh instead.
 
-FROM python:3.12.15-slim-trixie
+FROM python:3.15.2-slim-trixie
 
 # Set up the environment
 
@@ -60,7 +60,7 @@ CFG
         cattrs==26.2.1 \
         jsonschema==4.22.0 \
         typing_inspect==0.9.0 \
-        pyyaml==6.0.1 \
+        pyyaml==6.0.3 \
         Pygments==2.18.0 \
         python-i18n==0.3.9 \
         ruff==0.17.0
@@ -136,11 +136,11 @@ CFG
 
     # Exercise dependencies
     pip install --no-cache-dir --upgrade \
-      numpy==2.4.6 \
-      pandas==3.0.3 \
+      numpy==2.5.4 \
+      pandas==3.1.0 \
       openpyxl==3.1.5 \
-      matplotlib==3.10.9 \
-      lxml==6.1.1
+      matplotlib==3.11.2 \
+      lxml==6.1.3
 
     # Clean up caches
     apt-get clean
