@@ -54,7 +54,12 @@ CFG
         unzip
 
     # Python dependencies
-    pip install --no-cache-dir --upgrade \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        libc6-dev \
+        libyaml-dev
+    # Without a wheel, fail the build instead of silently building PyYAML without libyaml
+    PYYAML_FORCE_LIBYAML=1 pip install --no-cache-dir --upgrade \
         psutil==5.9.8 \
         attrs==26.1.0 \
         cattrs==26.2.1 \
