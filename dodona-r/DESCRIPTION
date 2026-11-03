@@ -6,6 +6,7 @@ Imports:
     BiocManager,
     GGally,
     HistData,
+    ISLR,
     ISLR2,
     ISwR,
     NHANES,
