@@ -65,7 +65,8 @@ RUN <<'EOF'
   # renv's cache would leave the packages symlinked into root's home, which runner cannot read.
   # R's own library already holds the recommended packages, so restore only fills the site library.
   # PPM has no binaries for this Debian release, so renv must not rewrite the snapshot URL to a binary one.
-  RENV_CONFIG_PPM_ENABLED=FALSE RENV_CONFIG_CACHE_ENABLED=FALSE RENV_CONFIG_INSTALL_JOBS="$(nproc)" Rscript -e "renv::restore( \
+  # renv keeps package source by default, which every submission then carries in memory.
+  RENV_CONFIG_PPM_ENABLED=FALSE RENV_CONFIG_CACHE_ENABLED=FALSE RENV_CONFIG_INSTALL_KEEP_SOURCE=FALSE RENV_CONFIG_INSTALL_JOBS="$(nproc)" Rscript -e "renv::restore( \
     project = '/requirements', \
     library = c('/usr/local/lib/R/site-library', '/usr/lib/R/site-library', '/usr/lib/R/library'), \
     prompt = FALSE)"
