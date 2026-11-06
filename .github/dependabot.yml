@@ -22,8 +22,12 @@ updates:
     - "< 15"
   - dependency-name: swipl
     versions:
-    - ">= 8.1.a"
-    - "< 8.2"
+    - ">= 10.1.a"
+    - "< 10.2"
+  - dependency-name: swipl
+    versions:
+    - ">= 10.3.a"
+    - "< 10.4"
   - dependency-name: haskell
     versions:
     - ">= 9.13"
