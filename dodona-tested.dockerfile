@@ -64,7 +64,6 @@ CFG
         attrs==26.1.0 \
         cattrs==26.2.1 \
         jsonschema==4.22.0 \
-        typing_inspect==0.9.0 \
         pyyaml==6.0.3 \
         Pygments==2.18.0 \
         python-i18n==0.3.9 \
