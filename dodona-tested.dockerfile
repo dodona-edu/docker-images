@@ -65,7 +65,6 @@ CFG
         cattrs==26.2.1 \
         jsonschema==4.22.0 \
         pyyaml==6.0.3 \
-        Pygments==2.18.0 \
         python-i18n==0.3.9 \
         ruff==0.17.0
 
