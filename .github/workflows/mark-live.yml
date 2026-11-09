@@ -1,0 +1,310 @@
+name: Mark live
+
+# Dispatch after a verified worker rollout, with the digests the workers run.
+run-name: Mark live ${{ inputs.gallery_version != '' && format('for worker {0}', inputs.gallery_version) || '(emergency fix)' }}${{ inputs.dry_run && ' (dry run)' || '' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      digests:
+        description: Text holding dodona-<image>@sha256:<digest> references, e.g. pasted boot-log lines
+        type: string
+        required: true
+      gallery_version:
+        description: Worker image version such as 1.0.49 (every image required); empty for an emergency fix that moves only :live
+        type: string
+        required: false
+      dry_run:
+        description: Check and report, but tag and rerun nothing
+        type: boolean
+        default: false
+
+concurrency:
+  group: mark-live
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      moved: ${{ steps.check.outputs.moved }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse and validate the inputs
+        env:
+          DIGESTS: ${{ inputs.digests }}
+          GALLERY_VERSION: ${{ inputs.gallery_version }}
+        run: |
+          set -euo pipefail
+
+          plan="$RUNNER_TEMP/plan.tsv"
+          : > "$plan"
+
+          if [ -n "$GALLERY_VERSION" ] && ! [[ "$GALLERY_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::gallery_version '$GALLERY_VERSION' is not of the form 1.0.49"
+            exit 1
+          fi
+
+          mapfile -t known < <(yq -r '.[]' images.yml)
+
+          matches=$(grep -oE 'dodona-[a-z0-9]+@sha256:[0-9a-f]{64}' <<<"$DIGESTS" | sort -u || true)
+          if [ -z "$matches" ]; then
+            echo "::error::No dodona-<image>@sha256:<digest> reference found in digests"
+            exit 1
+          fi
+
+          failed=0
+          while IFS= read -r match; do
+            image=${match#dodona-}
+            image=${image%%@*}
+            digest=${match#*@}
+
+            if ! printf '%s\n' "${known[@]}" | grep -qx "$image"; then
+              echo "::error::Image '$image' is not in images.yml"
+              failed=1
+            elif cut -f1 "$plan" | grep -qx "$image"; then
+              echo "::error::Image '$image' appears with two different digests"
+              failed=1
+            else
+              printf '%s\t%s\n' "$image" "$digest" >> "$plan"
+            fi
+          done <<<"$matches"
+
+          if [ -n "$GALLERY_VERSION" ]; then
+            missing=$(printf '%s\n' "${known[@]}" | grep -vxF -f <(cut -f1 "$plan") || true)
+            if [ -n "$missing" ]; then
+              echo "::error::gallery_version needs every image; missing: $(echo "$missing" | tr '\n' ' ')"
+              failed=1
+            fi
+          fi
+
+          exit "$failed"
+
+      - name: Check the registry
+        id: check
+        env:
+          GALLERY_VERSION: ${{ inputs.gallery_version }}
+        run: |
+          set -euo pipefail
+
+          # {{.Manifest.Digest}} silently renders the whole output, not the digest.
+          digest_of() {
+            docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' 2>/dev/null | jq -r '.digest // empty' || true
+          }
+
+          state="$RUNNER_TEMP/state.tsv"
+          : > "$state"
+          failed=0
+
+          while IFS=$'\t' read -r image digest; do
+            repo="ghcr.io/dodona-edu/dodona-$image"
+
+            if [ -z "$(digest_of "$repo@$digest")" ]; then
+              echo "::error::$repo@$digest does not exist"
+              failed=1
+              continue
+            fi
+
+            live=$(digest_of "$repo:live")
+            if [ -n "$GALLERY_VERSION" ]; then
+              worker=$(digest_of "$repo:worker-$GALLERY_VERSION")
+              if [ -n "$worker" ] && [ "$worker" != "$digest" ]; then
+                echo "::error::$repo:worker-$GALLERY_VERSION already holds $worker, not $digest"
+                failed=1
+              fi
+            fi
+
+            printf '%s\t%s\t%s\n' "$image" "$digest" "$live" >> "$state"
+          done < "$RUNNER_TEMP/plan.tsv"
+
+          [ "$failed" -eq 0 ] || exit 1
+
+          moved=$(awk -F'\t' '$2 != $3 { print $1 }' "$state" | jq -R . | jq -sc .)
+          echo "moved=$moved" >> "$GITHUB_OUTPUT"
+
+      - name: Move the tags
+        if: ${{ !inputs.dry_run }}
+        env:
+          GALLERY_VERSION: ${{ inputs.gallery_version }}
+        run: |
+          set -euo pipefail
+
+          while IFS=$'\t' read -r image digest _; do
+            repo="ghcr.io/dodona-edu/dodona-$image"
+            if [ -n "$GALLERY_VERSION" ]; then
+              docker buildx imagetools create -t "$repo:worker-$GALLERY_VERSION" "$repo@$digest"
+            fi
+            docker buildx imagetools create -t "$repo:live" "$repo@$digest"
+          done < "$RUNNER_TEMP/state.tsv"
+
+      - name: Summarise
+        if: ${{ !cancelled() && steps.check.outcome == 'success' }}
+        env:
+          GALLERY_VERSION: ${{ inputs.gallery_version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            if [ "$DRY_RUN" = true ]; then echo -n "Dry run, nothing tagged. "; fi
+            if [ -n "$GALLERY_VERSION" ]; then
+              echo "Worker image $GALLERY_VERSION: \`:live\` and \`:worker-$GALLERY_VERSION\`."
+            else
+              echo "Emergency fix, \`:live\` only."
+            fi
+            echo
+            echo '| image | :live | previous :live |'
+            echo '| --- | --- | --- |'
+            while IFS=$'\t' read -r image digest live; do
+              if [ "$digest" = "$live" ]; then
+                echo "| \`$image\` | \`$digest\` (unchanged) | |"
+              else
+                echo "| \`$image\` | \`$digest\` | ${live:-none} |"
+              fi
+            done < "$RUNNER_TEMP/state.tsv"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  rerun:
+    needs: tag
+    if: ${{ needs.tag.outputs.moved != '[]' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    env:
+      MOVED: ${{ needs.tag.outputs.moved }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      # image -> judge repo -> workflow files rerun on its open PRs.
+      REPO_MAP: |
+        {
+          "assembly": {"judge-assembly": ["integration_test.yml", "requirements.yml"]},
+          "bash": {"judge-bash": ["integration_test.yml", "requirements.yml"]},
+          "compilers": {"judge-compilers": ["test.yml", "requirements.yml"]},
+          "csharp": {"judge-csharp": ["integration_test.yml"]},
+          "haskell": {"judge-haskell": ["integration_test.yml", "packages.yml"]},
+          "html": {"judge-html": ["integration_test.yml", "requirements.yml"]},
+          "java": {"judge-java": ["integration_test.yml"]},
+          "markdown": {"judge-markdown": ["integration_test.yml"]},
+          "prolog": {"judge-prolog": ["integration_test.yml"]},
+          "python": {
+            "judge-pythia": ["integration_test.yml", "requirements.yml"],
+            "judge-turtle": ["integration_test.yml", "requirements.yml"]
+          },
+          "r": {"judge-r": ["integration_test.yml", "renv-lock.yml"]},
+          "sqlite": {"judge-sql": ["integration_test.yml", "requirements.yml"]},
+          "tested": {"universal-judge": ["integration_test.yml", "dockerfile.yml"]}
+        }
+    steps:
+      - name: Compute the judge repos
+        id: repos
+        run: |
+          set -euo pipefail
+
+          repos=$(jq -c --argjson moved "$MOVED" \
+            '[(.[$moved[]] // empty) | to_entries[]] | from_entries' <<<"$REPO_MAP")
+          echo "repos=$repos" >> "$GITHUB_OUTPUT"
+          echo "names=$(jq -r 'keys | join(",")' <<<"$repos")" >> "$GITHUB_OUTPUT"
+
+      - name: Check the App secrets
+        if: ${{ steps.repos.outputs.names != '' }}
+        env:
+          APP_CLIENT_ID: ${{ secrets.LIVE_RERUN_APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.LIVE_RERUN_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APP_CLIENT_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
+            if [ "$DRY_RUN" = true ]; then verb="would move"; else verb="have moved"; fi
+            echo "::error::The :live tags $verb, but the judge PR checks were not rerun: the GitHub App secrets LIVE_RERUN_APP_CLIENT_ID and LIVE_RERUN_APP_PRIVATE_KEY are missing."
+            exit 1
+          fi
+
+      - name: Create the App token
+        id: token
+        if: ${{ steps.repos.outputs.names != '' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.LIVE_RERUN_APP_CLIENT_ID }}
+          private-key: ${{ secrets.LIVE_RERUN_APP_PRIVATE_KEY }}
+          owner: dodona-edu
+          repositories: ${{ steps.repos.outputs.names }}
+
+      - name: Rerun the open PR checks
+        if: ${{ steps.repos.outputs.names != '' }}
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          REPOS: ${{ steps.repos.outputs.repos }}
+        run: |
+          set -uo pipefail
+
+          summary() { printf '%s\n' "$*" | tee -a "$GITHUB_STEP_SUMMARY"; }
+
+          failed=0
+
+          for repo in $(jq -r 'keys[]' <<<"$REPOS"); do
+            summary "### $repo"
+            summary
+
+            prs=$(gh pr list --repo "dodona-edu/$repo" --state open --limit 200 --json number,headRefOid) || {
+              echo "::error::Could not list the open PRs of $repo"
+              summary "Could not list the open PRs."
+              failed=1
+              continue
+            }
+
+            if [ "$(jq length <<<"$prs")" -eq 0 ]; then
+              summary "No open PRs."
+              summary
+              continue
+            fi
+
+            summary '| PR | workflow | run | action taken |'
+            summary '| --- | --- | --- | --- |'
+
+            while IFS=$'\t' read -r number sha; do
+              pr="[#$number](https://github.com/dodona-edu/$repo/pull/$number)"
+              for workflow in $(jq -r --arg repo "$repo" '.[$repo][]' <<<"$REPOS"); do
+                if ! runs=$(gh run list --repo "dodona-edu/$repo" --workflow "$workflow" --commit "$sha" --limit 1 \
+                  --json databaseId,status,url); then
+                  summary "| $pr | $workflow | | listing runs failed |"
+                  failed=1
+                  continue
+                fi
+
+                if [ "$(jq length <<<"$runs")" -eq 0 ]; then
+                  summary "| $pr | $workflow | | no run |"
+                  continue
+                fi
+
+                id=$(jq -r '.[0].databaseId' <<<"$runs")
+                url=$(jq -r '.[0].url' <<<"$runs")
+                status=$(jq -r '.[0].status' <<<"$runs")
+                run="[$id]($url)"
+
+                if [ "$status" != completed ]; then
+                  summary "| $pr | $workflow | $run | in progress, not rerun |"
+                elif [ "$DRY_RUN" = true ]; then
+                  summary "| $pr | $workflow | $run | would rerun |"
+                elif err=$(gh run rerun "$id" --repo "dodona-edu/$repo" 2>&1); then
+                  summary "| $pr | $workflow | $run | rerun |"
+                else
+                  summary "| $pr | $workflow | $run | rerun failed: ${err//$'\n'/ } |"
+                  failed=1
+                fi
+              done
+            done < <(jq -r '.[] | [.number, .headRefOid] | @tsv' <<<"$prs")
+
+            summary
+          done
+
+          exit "$failed"
