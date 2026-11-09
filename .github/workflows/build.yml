@@ -2,11 +2,8 @@ name: Build
 
 on:
   push:
-    branches: [ dev ]
-  # Publish pull requests ship :next, so their candidates would be built and never used.
-  # Not branches: [ dev ], stacked feature pull requests target each other's branches.
+    branches: [ master ]
   pull_request:
-    branches-ignore: [ master ]
     types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
     inputs:
@@ -19,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  # Runs that write the same tag take one lane: :next on dev, :pr-N per pull
+  # Runs that write the same tag take one lane: :next on master, :pr-N per pull
   # request. queue takes no expression and rules out cancel-in-progress, so a
   # superseded run finishes rather than stopping.
   group: build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
@@ -72,7 +69,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # What a push touched says nothing about what :next holds, so dev asks the
+      # What a push touched says nothing about what :next holds, so master asks the
       # tag instead: every image whose :next is not this commit's state is built.
       - name: Detect stale images
         if: ${{ github.event_name == 'push' }}
@@ -108,7 +105,7 @@ jobs:
             })));
 
             // Every branch below that cannot show :next is current builds instead.
-            // A needless build costs one run, a wrong skip leaves :next behind dev
+            // A needless build costs one run, a wrong skip leaves :next behind master
             // until someone touches the image again. It is also what heals a failed
             // build: :next keeps the revision of the last one that landed, so the
             // next push rebuilds what that one did not.
@@ -204,7 +201,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    # A build on dev stages to :next, publish.yml moves it to :latest.
+    # A build on master stages to :next, publish.yml moves it to :latest.
     - name: Set docker tags
       id: meta
       uses: docker/metadata-action@v6
@@ -213,7 +210,7 @@ jobs:
           ghcr.io/${{ github.repository_owner }}/dodona-${{ matrix.image }}
         tags: |
           type=ref,event=pr
-          type=raw,value=next,enable=${{ github.ref_name == 'dev' }}
+          type=raw,value=next,enable=${{ github.ref_name == 'master' }}
 
     - name: Build and push (GHCR)
       uses: docker/build-push-action@v7
@@ -434,3 +431,18 @@ jobs:
       - name: Fail when a needed job failed
         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
         run: exit 1
+
+  # Same run and concurrency lane as the build, so :next cannot move before the retag.
+  publish:
+    needs: [detect, build]
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && github.ref_name == 'master' && needs.detect.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      ship: true
+    secrets:
+      PGJUDGE_DEPLOY_TOKEN: ${{ secrets.PGJUDGE_DEPLOY_TOKEN }}
+      JUDGE_PYTHIA_CHECKOUT_KEY: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+      JUDGE_BASH_CHECKOUT_KEY: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
