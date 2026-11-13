@@ -98,6 +98,36 @@ updates:
     dodona-sqlite:
       patterns:
       - "*"
+- package-ecosystem: pip
+  directory: "/dodona-tested"
+  schedule:
+    interval: monthly
+    time: "13:00"
+    timezone: Europe/Brussels
+  open-pull-requests-limit: 99
+  groups:
+    dodona-tested:
+      patterns:
+      - "*"
+      exclude-patterns:
+      - "ruff"
+      update-types:
+      - minor
+      - patch
+- package-ecosystem: npm
+  directory: "/dodona-tested"
+  schedule:
+    interval: monthly
+    time: "13:00"
+    timezone: Europe/Brussels
+  open-pull-requests-limit: 99
+  groups:
+    dodona-tested:
+      patterns:
+      - "*"
+      update-types:
+      - minor
+      - patch
 - package-ecosystem: github-actions
   directory: "/"
   schedule:

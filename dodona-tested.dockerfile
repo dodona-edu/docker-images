@@ -35,6 +35,8 @@ ENV DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK=true
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 ARG DOTNET_SDK_CHANNEL=10.0
 
+COPY dodona-tested/ /requirements/
+
 # Install dependencies
 # hadolint ignore=DL3013,DL3016
 RUN <<EOF
@@ -68,14 +70,7 @@ CFG
         libc6-dev \
         libyaml-dev
     # Without a wheel, fail the build instead of silently building PyYAML without libyaml
-    PYYAML_FORCE_LIBYAML=1 pip install --no-cache-dir --upgrade \
-        psutil==5.9.8 \
-        attrs==26.1.0 \
-        cattrs==26.2.1 \
-        jsonschema==4.22.0 \
-        pyyaml==6.0.3 \
-        python-i18n==0.3.9 \
-        ruff==0.17.0
+    PYYAML_FORCE_LIBYAML=1 pip install --no-cache-dir --upgrade -r /requirements/tested.txt
 
     # C/C++ dependencies
     apt-get install -y --no-install-recommends \
@@ -105,13 +100,12 @@ CFG
     # JavaScript dependencies
     bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash -'
     apt-get install -y --no-install-recommends nodejs
-    npm install -g eslint@8.57 abstract-syntax-tree@2.22
-
-    # TypeScript dependencies
+    apt-get install -y --no-install-recommends jq
     # TypeScript 7 (the Go port) has no JavaScript API: TESTed parses
     # submissions with TypeScript 6's, installed alongside as tsc6.
-    npm install -g typescript@7.0.2 @typescript/typescript6@6.0.2 tsx@4.19.2
-    npm install -g @types/node @typescript-eslint/parser @typescript-eslint/eslint-plugin
+    # package.json only declares the versions for Dependabot; global install, not npm ci, as TESTed resolves modules through NODE_PATH.
+    # shellcheck disable=SC2046
+    npm install -g $(jq -r '.dependencies | to_entries | map("\(.key)@\(.value)") | join(" ")' /requirements/package.json)
 
     # Haskell dependencies
     apt-get install -y --no-install-recommends \
@@ -156,12 +150,7 @@ CFG
     chmod 755 /usr/local/bin/checkstyle
 
     # Exercise dependencies
-    pip install --no-cache-dir --upgrade \
-      numpy==2.5.4 \
-      pandas==3.1.0 \
-      openpyxl==3.1.5 \
-      matplotlib==3.11.2 \
-      lxml==6.1.3
+    pip install --no-cache-dir --upgrade -r /requirements/exercises.txt
 
     # Clean up caches
     apt-get clean
