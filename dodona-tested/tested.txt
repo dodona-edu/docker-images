@@ -1,0 +1,7 @@
+psutil==5.9.8
+attrs==26.1.0
+cattrs==26.2.1
+jsonschema==4.22.0
+pyyaml==6.0.3
+python-i18n==0.3.9
+ruff==0.17.0
