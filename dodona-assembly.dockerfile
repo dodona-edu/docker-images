@@ -1,6 +1,7 @@
 FROM python:3.15.2-slim-bookworm
 
 COPY dodona-assembly/requirements.txt /requirements.txt
+COPY dodona-assembly/build.txt /build.txt
 
 ARG QEMU_VERSION="8.0.4"
 ARG QEMU_SHA256="81c817dda38af958be5bef1a6cf55b658bb2d3fb87c1e6a571de6b7b2c44516c"
@@ -33,7 +34,7 @@ RUN dpkg --add-architecture armhf \
  # Judge Python dependencies
  && pip install --no-cache-dir --upgrade -r /requirements.txt \
  # qemu 8.0's bundled Meson needs distutils, which Python 3.12+ only gets from setuptools
- && pip install --no-cache-dir setuptools==72.1.0 \
+ && pip install --no-cache-dir -r /build.txt \
  # Fetch packages
  && curl -o qemu.tar.xz https://download.qemu.org/qemu-${QEMU_VERSION}.tar.xz \
  && echo "${QEMU_SHA256} qemu.tar.xz" | sha256sum --check \

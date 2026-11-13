@@ -1,5 +1,7 @@
 FROM python:3.15.2-slim-trixie
 
+ARG SQLITE_VERSION=3.46.1
+
 COPY dodona-sqlite/requirements.txt /requirements.txt
 
 RUN <<EOF
@@ -10,7 +12,7 @@ RUN <<EOF
   # install procps, otherwise pkill cannot be not found
   apt-get -y install --no-install-recommends \
     procps \
-    sqlite3=3.46.1-7+deb13u2
+    "sqlite3=${SQLITE_VERSION}-*"
 
   rm -rf /var/lib/apt/lists/*
   apt-get clean
