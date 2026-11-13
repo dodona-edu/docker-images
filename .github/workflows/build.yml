@@ -17,10 +17,8 @@ permissions:
 
 concurrency:
   # Runs that write the same tag take one lane: :next on master, :pr-N per pull
-  # request. queue takes no expression and rules out cancel-in-progress, so a
-  # superseded run finishes rather than stopping.
+  # request. A newer run replaces the one still waiting; a running one finishes.
   group: build-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
-  queue: max
 
 jobs:
   detect:
