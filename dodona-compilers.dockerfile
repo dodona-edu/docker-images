@@ -2,8 +2,8 @@ FROM python:3.15.2-slim-bookworm
 
 COPY dodona-compilers/requirements.txt /requirements.txt
 
-ARG LLVM_VERSION="13.0.0"
-ARG LLVM_SHA256="9680c841b5ceffa51f21d0d2ddd7573447b659d1889b83c153b7473342b22a49"
+ARG LLVM_VERSION="13.0.1"
+ARG LLVM_SHA256="78d5bcf80d03ea09e38bce4cadbdefd4042c8e7c7e347bce9b6dc8b41b617aa4"
 
 
 # hadolint ignore=DL3013,DL4006
