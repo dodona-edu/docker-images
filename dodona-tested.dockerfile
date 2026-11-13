@@ -9,6 +9,8 @@ FROM python:3.15.2-slim-trixie
 
 # Set up the environment
 
+ARG SHELLCHECK_VERSION=0.10.0
+
 # Kotlin
 ENV SDKMAN_DIR=/usr/local/sdkman
 ENV PATH=$SDKMAN_DIR/candidates/kotlin/current/bin:$PATH
@@ -86,7 +88,8 @@ CFG
         tree \
         vim \
         xxd \
-        shellcheck
+        xz-utils
+    bash -c 'set -o pipefail && curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ --strip-components=1 -C /usr/local/bin "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"'
 
     # JavaScript dependencies
     bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_22.x | bash -'
