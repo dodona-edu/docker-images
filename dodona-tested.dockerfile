@@ -13,6 +13,10 @@ FROM python:3.15.2-slim-trixie
 ENV SDKMAN_DIR=/usr/local/sdkman
 ENV PATH=$SDKMAN_DIR/candidates/kotlin/current/bin:$PATH
 ENV PATH=$SDKMAN_DIR/candidates/java/current/bin:$PATH
+ARG TEMURIN_VERSION=21.0.3-tem
+ARG KOTLIN_VERSION=2.4.21
+ARG KTLINT_VERSION=1.2.1
+ARG CHECKSTYLE_VERSION=8.36.1
 # Haskell
 ENV HASKELL_DIR=/usr/local/ghcupdir
 ENV PATH=$HASKELL_DIR/ghc/bin:$PATH
@@ -129,13 +133,17 @@ CFG
     # Java and Kotlin dependencies
     bash -c 'set -o pipefail && curl -s "https://get.sdkman.io?rcupdate=false" | bash'
     chmod a+x "$SDKMAN_DIR/bin/sdkman-init.sh"
-    bash -c "source \"$SDKMAN_DIR/bin/sdkman-init.sh\" && sdk install java 21.0.3-tem && sdk install kotlin"
-    curl -sSLO https://github.com/pinterest/ktlint/releases/download/1.2.1/ktlint
+    bash -c "source \"$SDKMAN_DIR/bin/sdkman-init.sh\" && sdk install java ${TEMURIN_VERSION} && sdk install kotlin ${KOTLIN_VERSION}"
+    curl -sSLO https://github.com/pinterest/ktlint/releases/download/${KTLINT_VERSION}/ktlint
     chmod a+x ktlint
     mv ktlint /usr/local/bin
 
     # Java specific dependencies
-    apt-get install -y --no-install-recommends checkstyle
+    mkdir -p /usr/local/share/checkstyle
+    curl -fsSL -o "/usr/local/share/checkstyle/checkstyle-${CHECKSTYLE_VERSION}-all.jar" \
+        "https://github.com/checkstyle/checkstyle/releases/download/checkstyle-${CHECKSTYLE_VERSION}/checkstyle-${CHECKSTYLE_VERSION}-all.jar"
+    printf '#!/bin/sh\nexec java -jar /usr/local/share/checkstyle/checkstyle-%s-all.jar "$@"\n' "$CHECKSTYLE_VERSION" > /usr/local/bin/checkstyle
+    chmod 755 /usr/local/bin/checkstyle
 
     # Exercise dependencies
     pip install --no-cache-dir --upgrade \
