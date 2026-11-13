@@ -1,0 +1,48 @@
+name: Not live yet
+
+# Keeps the "upcoming" prerelease listing the PRs whose images are published as :latest but not yet :live.
+on:
+  workflow_run:
+    workflows: [Build, Mark live]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: not-live-yet
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    # Red runs count too: Build publishes and Mark live tags before the jobs that can fail.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.name == 'Mark live' || (github.event.workflow_run.event != 'pull_request' && github.event.workflow_run.head_branch == 'master') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Update the release
+        run: |
+          set -euo pipefail
+
+          body="$RUNNER_TEMP/body.md"
+          HEADER='Merged and published, not yet on the workers. These go live with the next worker image.' \
+            EMPTY='Everything on master is live.' \
+            .github/scripts/release-notes.sh > "$body"
+          tee -a "$GITHUB_STEP_SUMMARY" < "$body"
+
+          # An edit does not notify watchers, a new release does: never delete and recreate.
+          if ! gh release view upcoming >/dev/null 2>&1; then
+            gh release create upcoming --prerelease --latest=false --target "$GITHUB_SHA" --title 'Not live yet' --notes-file "$body"
+          else
+            gh release edit upcoming --notes-file "$body" --prerelease --latest=false
+          fi
