@@ -28,6 +28,7 @@ ENV DOTNET_NOLOGO=1
 ENV DOTNET_GENERATE_ASPNET_CERTIFICATE=false
 ENV DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK=true
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+ARG DOTNET_SDK_CHANNEL=10.0
 
 # Install dependencies
 # hadolint ignore=DL3013,DL3016
@@ -132,7 +133,7 @@ CFG
     dpkg -i packages-microsoft-prod.deb
     rm packages-microsoft-prod.deb
     apt-get update
-    apt-get install -y --no-install-recommends dotnet-sdk-10.0
+    apt-get install -y --no-install-recommends dotnet-sdk-${DOTNET_SDK_CHANNEL}
 
     # Java and Kotlin dependencies
     bash -c 'set -o pipefail && curl -s "https://get.sdkman.io?rcupdate=false" | bash'
