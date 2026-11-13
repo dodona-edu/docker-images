@@ -22,6 +22,7 @@ ENV PATH=$HASKELL_DIR/ghc/bin:$PATH
 ENV PATH=$HASKELL_DIR/cabal:$PATH
 # Node
 ENV NODE_PATH=/usr/lib/node_modules
+ARG NODE_MAJOR=22
 
 # .NET: every submission runs in a fresh container, so each dotnet call is a first run
 ENV DOTNET_NOLOGO=1
@@ -98,7 +99,7 @@ CFG
         shellcheck
 
     # JavaScript dependencies
-    bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_22.x | bash -'
+    bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash -'
     apt-get install -y --no-install-recommends nodejs
     npm install -g eslint@8.57 abstract-syntax-tree@2.22
 
