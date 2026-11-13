@@ -1,7 +1,7 @@
 FROM debian:trixie-slim
 
 # The monthly toolchain routine reads and bumps this version.
-ARG DOTNET_SDK_VERSION=10.0.402
+ARG DOTNET_SDK_VERSION=10.0.404
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
