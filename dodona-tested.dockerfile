@@ -12,7 +12,7 @@ ARG CPPCHECK_VERSION=2.17
 
 # Set up the environment
 
-ARG SHELLCHECK_VERSION=0.10.0
+ARG SHELLCHECK_VERSION=0.11.0
 
 # Kotlin
 ENV SDKMAN_DIR=/usr/local/sdkman
