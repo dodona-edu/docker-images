@@ -26,6 +26,10 @@ ARG CHECKSTYLE_VERSION=8.36.1
 ENV HASKELL_DIR=/usr/local/ghcupdir
 ENV PATH=$HASKELL_DIR/ghc/bin:$PATH
 ENV PATH=$HASKELL_DIR/cabal:$PATH
+ARG GHC_VERSION=9.12.4
+ARG CABAL_VERSION=3.16.1.0
+ARG AESON_VERSION=2.3.2.0
+ARG HLINT_VERSION=3.10
 # Node
 ENV NODE_PATH=/usr/lib/node_modules
 ARG NODE_MAJOR=22
@@ -112,17 +116,19 @@ CFG
 
     # Haskell dependencies
     apt-get install -y --no-install-recommends \
-        hlint \
         lld \
         autoconf \
         build-essential \
         zlib1g-dev \
         libgmp-dev
+    mkdir -p /usr/local/lib/hlint
+    bash -c 'set -o pipefail && curl -fsSL "https://github.com/ndmitchell/hlint/releases/download/v${HLINT_VERSION}/hlint-${HLINT_VERSION}-x86_64-linux.tar.gz" | tar -xz --strip-components=1 -C /usr/local/lib/hlint'
+    ln -s /usr/local/lib/hlint/hlint /usr/local/bin/hlint
     bash -c "set -o pipefail && curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 BOOTSTRAP_HASKELL_MINIMAL=1 sh"
-    bash -c "source /root/.ghcup/env && ghcup install ghc 9.12.4 --isolate $HASKELL_DIR/ghc"
-    bash -c "source /root/.ghcup/env && ghcup install cabal --isolate $HASKELL_DIR/cabal"
+    bash -c "source /root/.ghcup/env && ghcup install ghc ${GHC_VERSION} --isolate $HASKELL_DIR/ghc"
+    bash -c "source /root/.ghcup/env && ghcup install cabal ${CABAL_VERSION} --isolate $HASKELL_DIR/cabal"
     cabal update
-    cabal v1-install --global aeson
+    cabal v1-install --global aeson-${AESON_VERSION}
 
     # GHC: drop profiling libs/interfaces, haddock/HTML docs, and debug symbols (unused at runtime)
     find "$HASKELL_DIR/ghc" -type f \( -name '*_p.a' -o -name '*.p_o' -o -name '*.p_hi' \) -delete
