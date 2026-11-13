@@ -7,6 +7,9 @@
 
 FROM python:3.15.2-slim-trixie
 
+ARG GCC_MAJOR=14
+ARG CPPCHECK_VERSION=2.17
+
 # Set up the environment
 
 # Kotlin
@@ -71,7 +74,12 @@ CFG
     # C/C++ dependencies
     apt-get install -y --no-install-recommends \
         gcc \
+        g++ \
         cppcheck
+    # Debian owns these versions: fail the build when a release changes them
+    [ "$(gcc -dumpversion)" = "$GCC_MAJOR" ] || { echo "gcc is $(gcc -dumpversion), expected $GCC_MAJOR" >&2; exit 1; }
+    [ "$(g++ -dumpversion)" = "$GCC_MAJOR" ] || { echo "g++ is $(g++ -dumpversion), expected $GCC_MAJOR" >&2; exit 1; }
+    case "$(cppcheck --version)" in "Cppcheck $CPPCHECK_VERSION"*) ;; *) echo "$(cppcheck --version), expected Cppcheck $CPPCHECK_VERSION" >&2; exit 1 ;; esac
 
     # Bash dependencies
     apt-get install -y --no-install-recommends \
