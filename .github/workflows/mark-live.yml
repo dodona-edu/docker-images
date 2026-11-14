@@ -34,6 +34,7 @@ jobs:
       packages: write
     outputs:
       moved: ${{ steps.check.outputs.moved }}
+      moves: ${{ steps.check.outputs.moves }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -135,7 +136,11 @@ jobs:
 
           [ "$failed" -eq 0 ] || exit 1
 
-          moved=$(awk -F'\t' '$2 != $3 { print $1 }' "$state" | jq -R . | jq -sc .)
+          # {image: {from, to}} for the images whose :live changes; from is empty without a :live.
+          moves=$(awk -F'\t' '$2 != $3 { print $1 "\t" $3 "\t" $2 }' "$state" \
+            | jq -R 'split("\t") | {(.[0]): {from: .[1], to: .[2]}}' | jq -sc 'add // {}')
+          moved=$(jq -c 'keys' <<<"$moves")
+          echo "moves=$moves" >> "$GITHUB_OUTPUT"
           echo "moved=$moved" >> "$GITHUB_OUTPUT"
 
       - name: Move the tags
@@ -308,3 +313,50 @@ jobs:
           done
 
           exit "$failed"
+
+  release:
+    needs: tag
+    if: ${{ needs.tag.outputs.moved != '[]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      MOVES: ${{ needs.tag.outputs.moves }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create the release
+        run: |
+          set -euo pipefail
+
+          now=$(date -u '+%Y-%m-%d %H:%M')
+          tag=${now%% *}
+          n=1
+          while git rev-parse -q --verify "refs/tags/$tag" >/dev/null; do
+            n=$((n + 1))
+            tag="${now%% *}.$n"
+          done
+          title="Judge images $tag"
+
+          body="$RUNNER_TEMP/body.md"
+          HEADER="Went live on $now UTC. [Workflow run]($RUN_URL)" EMPTY='No images moved.' \
+            .github/scripts/release-notes.sh > "$body"
+
+          {
+            if [ "$DRY_RUN" = true ]; then
+              echo "Dry run, no release created. Would create **$title** (tag \`$tag\`, target \`$GITHUB_SHA\`):"
+              echo
+            fi
+            cat "$body"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          if [ "$DRY_RUN" != true ]; then
+            gh release create "$tag" --target "$GITHUB_SHA" --title "$title" --notes-file "$body" --latest
+          fi
