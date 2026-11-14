@@ -32,7 +32,7 @@ ARG AESON_VERSION=2.3.2.0
 ARG HLINT_VERSION=3.10
 # Node
 ENV NODE_PATH=/usr/lib/node_modules
-ARG NODE_MAJOR=22
+ARG NODE_MAJOR=26
 
 # .NET: every submission runs in a fresh container, so each dotnet call is a first run
 ENV DOTNET_NOLOGO=1
