@@ -1,4 +1,4 @@
-FROM python:3.15.2-slim-bookworm
+FROM python:3.15.2-slim-trixie
 
 COPY dodona-compilers/requirements.txt /requirements.txt
 
