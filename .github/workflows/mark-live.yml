@@ -209,7 +209,7 @@ jobs:
           },
           "r": {"judge-r": ["integration_test.yml", "renv-lock.yml"]},
           "sqlite": {"judge-sql": ["integration_test.yml", "requirements.yml"]},
-          "tested": {"universal-judge": ["integration_test.yml", "dockerfile.yml"]}
+          "tested": {"universal-judge": ["integration_test.yml"]}
         }
     steps:
       - name: Compute the judge repos
@@ -360,3 +360,167 @@ jobs:
           if [ "$DRY_RUN" != true ]; then
             gh release create "$tag" --target "$GITHUB_SHA" --title "$title" --notes-file "$body" --latest
           fi
+
+  sync:
+    needs: tag
+    if: ${{ needs.tag.outputs.moved != '[]' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    env:
+      MOVED: ${{ needs.tag.outputs.moved }}
+      MOVES: ${{ needs.tag.outputs.moves }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      # image -> target repo, PR branch, and image path -> repo path; a trailing / marks a directory that is replaced.
+      SYNC_MAP: |
+        {
+          "tested": {
+            "repo": "universal-judge",
+            "branch": "chore/sync-dodona-tested",
+            "files": {
+              "/dodona-tested.dockerfile": ".devcontainer/dodona-tested.dockerfile",
+              "/main.sh": ".devcontainer/main.sh",
+              "/requirements/": ".devcontainer/dodona-tested/"
+            }
+          }
+        }
+    steps:
+      - name: Compute the targets
+        id: targets
+        run: |
+          set -euo pipefail
+
+          targets=$(jq -c --argjson moved "$MOVED" 'with_entries(select(.key as $k | $moved | index($k)))' <<<"$SYNC_MAP")
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+          echo "names=$(jq -r '[.[].repo] | unique | join(",")' <<<"$targets")" >> "$GITHUB_OUTPUT"
+
+      - name: Check the App secrets
+        id: secrets
+        if: ${{ steps.targets.outputs.names != '' }}
+        env:
+          APP_CLIENT_ID: ${{ secrets.TESTED_SYNC_APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.TESTED_SYNC_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$APP_CLIENT_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          elif [ "$DRY_RUN" = true ]; then
+            echo "::warning::The GitHub App secrets TESTED_SYNC_APP_CLIENT_ID and TESTED_SYNC_APP_PRIVATE_KEY are missing: diffing against an anonymous public checkout."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::The :live tags have moved, but the build files were not synced: the GitHub App secrets TESTED_SYNC_APP_CLIENT_ID and TESTED_SYNC_APP_PRIVATE_KEY are missing."
+            exit 1
+          fi
+
+      - name: Create the App token
+        id: token
+        if: ${{ steps.secrets.outputs.present == 'true' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.TESTED_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.TESTED_SYNC_APP_PRIVATE_KEY }}
+          owner: dodona-edu
+          repositories: ${{ steps.targets.outputs.names }}
+
+      - name: Sync the build files
+        if: ${{ steps.targets.outputs.names != '' }}
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          TARGETS: ${{ steps.targets.outputs.targets }}
+        run: |
+          set -euo pipefail
+
+          summary() { printf '%s\n' "$*" | tee -a "$GITHUB_STEP_SUMMARY"; }
+
+          subject='Sync the dodona-tested build files from the live image'
+          work="$RUNNER_TEMP/sync"
+          mkdir -p "$work"
+
+          for image in $(jq -r 'keys[]' <<<"$TARGETS"); do
+            repo=$(jq -r --arg i "$image" '.[$i].repo' <<<"$TARGETS")
+            branch=$(jq -r --arg i "$image" '.[$i].branch' <<<"$TARGETS")
+            digest=$(jq -r --arg i "$image" '.[$i].to' <<<"$MOVES")
+            ref="ghcr.io/dodona-edu/dodona-$image@$digest"
+            clone="$work/$repo"
+
+            summary "### dodona-$image to dodona-edu/$repo"
+            summary
+
+            if [ -n "$GH_TOKEN" ]; then
+              git clone --quiet --depth 1 "https://x-access-token:$GH_TOKEN@github.com/dodona-edu/$repo.git" "$clone"
+            else
+              git clone --quiet --depth 1 "https://github.com/dodona-edu/$repo.git" "$clone"
+            fi
+            git -C "$clone" config user.name 'github-actions[bot]'
+            git -C "$clone" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+            container=$(docker create "$ref")
+            while IFS=$'\t' read -r src dest; do
+              if [[ "$src" == */ ]]; then
+                dest=${dest%/}
+                rm -rf "${clone:?}/$dest"
+                mkdir -p "$clone/$dest"
+                docker cp "$container:$src." "$clone/$dest"
+              else
+                mkdir -p "$(dirname "$clone/$dest")"
+                docker cp "$container:$src" "$clone/$dest"
+              fi
+            done < <(jq -r --arg i "$image" '.[$i].files | to_entries[] | [.key, .value] | @tsv' <<<"$TARGETS")
+            docker rm "$container" >/dev/null
+
+            mapfile -t dests < <(jq -r --arg i "$image" '.[$i].files[]' <<<"$TARGETS")
+            git -C "$clone" add -A -- "${dests[@]}"
+
+            if [ -z "$(git -C "$clone" status --porcelain)" ]; then
+              summary "The build files in \`$repo\` already match \`$ref\`: nothing to sync."
+              pr=
+              if [ -n "$GH_TOKEN" ]; then
+                pr=$(gh pr list --repo "dodona-edu/$repo" --head "$branch" --state open --json url --jq '.[0].url // empty')
+              fi
+              if [ -n "$pr" ] && [ "$DRY_RUN" = true ]; then
+                summary "Dry run: would close the open sync PR $pr (branch \`$branch\`), because its build files already match \`$ref\`."
+              elif [ -n "$pr" ]; then
+                gh pr close --repo "dodona-edu/$repo" "$branch" --delete-branch --comment "Closed because the build files of the new :live image ($ref) already match the default branch; triggered by $RUN_URL."
+                summary "Closed the open sync PR $pr (branch \`$branch\`), because its build files already match \`$ref\`."
+              fi
+              summary
+              continue
+            fi
+
+            if [ "$DRY_RUN" = true ]; then
+              summary "Dry run, nothing pushed. Changes against the default branch of \`$repo\` from \`$ref\`:"
+              summary
+              {
+                echo '```'
+                git -C "$clone" diff --cached --stat
+                echo
+                git -C "$clone" diff --cached
+                echo '```'
+              } | tee -a "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+
+            git -C "$clone" commit --quiet -m "$subject" -m "Files taken from $ref, now :live.
+
+          Workflow run: $RUN_URL"
+            git -C "$clone" push --quiet --force origin "HEAD:refs/heads/$branch"
+
+            if [ "$(gh pr list --repo "dodona-edu/$repo" --head "$branch" --state open --json number --jq length)" -gt 0 ]; then
+              summary "Updated the open sync PR of \`$repo\` (branch \`$branch\`)."
+              summary
+              continue
+            fi
+
+            body="$work/$repo-body.md"
+            {
+              echo "The build files come from \`ghcr.io/dodona-edu/dodona-$image@$digest\`, now \`:live\`. Triggered by [this workflow run]($RUN_URL)."
+              echo
+              echo "This branch is rewritten on every go-live: do not edit it by hand."
+            } > "$body"
+            url=$(gh pr create --repo "dodona-edu/$repo" --head "$branch" --title "$subject" --body-file "$body")
+            gh pr edit "$url" --add-reviewer bmesuere,thvmulle
+            gh pr merge "$url" --auto --merge
+            summary "Opened $url with auto merge, waiting for an approval."
+            summary
+          done
