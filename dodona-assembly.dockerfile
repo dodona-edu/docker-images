@@ -1,4 +1,4 @@
-FROM python:3.15.2-slim-bookworm
+FROM python:3.15.2-slim-trixie
 
 COPY dodona-assembly/requirements.txt /requirements.txt
 COPY dodona-assembly/build.txt /build.txt
@@ -17,13 +17,13 @@ RUN dpkg --add-architecture armhf \
  # Judge compilation dependencies
  && apt-get install -y --no-install-recommends gcc \
  # Runtime dependencies (x86 32-bit)
- && apt-get install -y --no-install-recommends libc6-dev-i386 lib32gcc-12-dev \
+ && apt-get install -y --no-install-recommends libc6-dev-i386 lib32gcc-14-dev \
  # pkill for main.sh's trap
  && apt-get install -y --no-install-recommends procps \
  # Runtime dependencies (ARM 32-bit)
  && apt-get install -y --no-install-recommends libc6:armhf \
  # Added for compiling and running Assembly (x86, x64, ARM, AArch64)
- && apt-get install -y --no-install-recommends libc6-dev-arm64-cross gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu libglib2.0-0 \
+ && apt-get install -y --no-install-recommends libc6-dev-arm64-cross gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu libglib2.0-0t64 \
  && apt-get install -y --no-install-recommends libc6-dev-armhf-cross gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf \
  && apt-get install -y --no-install-recommends valgrind \
  # Build tools
