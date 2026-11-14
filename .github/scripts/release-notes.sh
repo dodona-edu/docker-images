@@ -54,19 +54,58 @@ no_prs="No merged PR changed this image's files between the two builds."
 
 # PRs merged into dev reach master as one "from dodona-edu/dev" merge: skip it and
 # list the PR merges inside it, whose first parent is dev itself.
-# prs_for <image> <old rev> <new rev>
+# prs_for <image> <old rev> <new rev> [<group>]: "- <title> (#N)" per PR; with a group, only PRs whose tested_groups hold it.
 prs_for() {
-  local image=$1 sha subject title number
+  local image=$1 group=${4:-} sha subject title number
   while IFS=$'\t' read -r sha subject; do
     [[ "$subject" =~ ^Merge\ pull\ request\ \#([0-9]+)\ from\ (.+)$ ]] || continue
     number=${BASH_REMATCH[1]}
     [ "${BASH_REMATCH[2]}" != dodona-edu/dev ] || continue
+    [ -z "$group" ] || tested_groups "$sha" | grep -qxF "$group" || continue
     git diff --quiet "$sha^1" "$sha" -- "dodona-$image.dockerfile" "dodona-$image" || {
       title=$(git log -1 --format=%b "$sha" | sed -n 1p)
       title=${title:-$subject}
-      echo "- ${title//@/@$zwsp} (#$number)"
+      printf '%s\n' "- ${title//@/@$zwsp} (#$number)"
     }
   done < <(git log --merges --reverse --format='%H%x09%s' "$2..$3")
+}
+
+# Languages of a dodona-tested.dockerfile ARG name or a dodona-tested/ path, one per line.
+# The group list in group_tested_prs must hold every value returned here.
+tested_languages() {
+  case $1 in
+    TEMURIN_VERSION) printf '%s\n' Java Kotlin ;;
+    KOTLIN_VERSION | KTLINT_VERSION) echo Kotlin ;;
+    CHECKSTYLE_VERSION) echo Java ;;
+    GHC_VERSION | CABAL_VERSION | AESON_VERSION | HLINT_VERSION) echo Haskell ;;
+    NODE_MAJOR | dodona-tested/package.json) echo JavaScript/TypeScript ;;
+    GCC_MAJOR | CPPCHECK_VERSION) echo C/C++ ;;
+    DOTNET_SDK_CHANNEL) echo C# ;;
+    SHELLCHECK_VERSION) echo Bash ;;
+    dodona-tested/exercises.txt) echo Python ;;
+    dodona-tested/tested.txt) echo General ;;
+  esac
+}
+
+# tested_groups <merge sha>: the groups its ARG and file changes map to, one per line; General when none.
+tested_groups() {
+  local sha=$1 groups
+  groups=$({
+    git diff -U0 "$sha^1" "$sha" -- dodona-tested.dockerfile | sed -nE 's/^[+-]ARG ([A-Z_]+)=.*/\1/p'
+    git diff --name-only "$sha^1" "$sha" -- dodona-tested/
+  } | while IFS= read -r key; do tested_languages "$key"; done | sort -u)
+  echo "${groups:-General}"
+}
+
+# group_tested_prs <old rev> <new rev>: the tested PRs under "#### <group>" subsections.
+group_tested_prs() {
+  local group lines sep=""
+  for group in General Bash C/C++ C# Haskell Java JavaScript/TypeScript Kotlin Python; do
+    lines=$(prs_for tested "$1" "$2" "$group")
+    [ -n "$lines" ] || continue
+    printf '%s#### %s\n\n%s\n' "$sep" "$group" "$lines"
+    sep=$'\n'
+  done
 }
 
 images=$(yq -r '.[]' images.yml)
@@ -122,7 +161,13 @@ for image in $(jq -r 'keys[]' <<<"$moves"); do
   echo
   if [ "$old_known" = true ] && [ "$new_known" = true ]; then
     prs=$(prs_for "$image" "$old_rev" "$new_rev")
-    echo "${prs:-$no_prs}"
+    if [ -z "$prs" ]; then
+      echo "$no_prs"
+    elif [ "$image" = tested ]; then
+      group_tested_prs "$old_rev" "$new_rev"
+    else
+      echo "$prs"
+    fi
   else
     echo "No PR list: the previous or new revision is unknown to this repository."
   fi
