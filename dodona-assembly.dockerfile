@@ -3,8 +3,8 @@ FROM python:3.15.2-slim-bookworm
 COPY dodona-assembly/requirements.txt /requirements.txt
 COPY dodona-assembly/build.txt /build.txt
 
-ARG QEMU_VERSION="8.0.4"
-ARG QEMU_SHA256="81c817dda38af958be5bef1a6cf55b658bb2d3fb87c1e6a571de6b7b2c44516c"
+ARG QEMU_VERSION="11.1.3"
+ARG QEMU_SHA256="5a8289c7940dc77d3873c81a6c29ba3afe1446fc9d36e77fa1658cdbecb84b22"
 ARG VALGRIND_VERSION="3.21.0"
 ARG VALGRIND_SHA256="10ce1618bb3e33fad16eb79552b0a3e1211762448a0d7fce11c8a6243b9ac971"
 
