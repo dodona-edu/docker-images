@@ -221,6 +221,35 @@ RUN <<EOF
     bash -c 'cd /usr/local/share/tested/cpp/static && flags="-std=c++20 -Wall -O0" && g++ $flags -c values.cpp evaluation_result.cpp && echo "$flags" > flags'
 EOF
 
+# AOT caches that cut the start-up of TESTed's Kotlin and Java compilers. They are
+# built with the JVM flags and classpath of Kotlin.compilation and Java.compilation
+# in tested/languages/{kotlin,java}/config.py of universal-judge, so the two must
+# change together; its tests/test_jvm_commands.py fails when the judge cannot use them.
+# ADD keys the build cache on the template contents.
+ARG TESTED_KOTLIN_TEMPLATES=https://raw.githubusercontent.com/dodona-edu/universal-judge/master/tested/languages/kotlin/templates
+ARG TESTED_JAVA_TEMPLATES=https://raw.githubusercontent.com/dodona-edu/universal-judge/master/tested/languages/java/templates
+# DL3020: hadolint does not see that these ARGs are URLs.
+# hadolint ignore=DL3020
+ADD ${TESTED_KOTLIN_TEMPLATES}/EvaluationResult.kt ${TESTED_KOTLIN_TEMPLATES}/Values.kt /tmp/tested-aot/kotlin/
+# hadolint ignore=DL3020
+ADD ${TESTED_JAVA_TEMPLATES}/EvaluationResult.java ${TESTED_JAVA_TEMPLATES}/Values.java /tmp/tested-aot/java/
+# DL3003: the compilers run from the directories holding the templates.
+# hadolint ignore=DL3003
+RUN <<EOF
+    set -eux
+    KOTLIN_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v kotlinc)")")")"
+    mkdir -p /usr/local/share/tested/kotlin /usr/local/share/tested/java /tmp/tested-aot/out
+    cd /tmp/tested-aot/kotlin
+    java -XX:AOTCacheOutput=/usr/local/share/tested/kotlin/kotlinc.aot -Xmx192M -XX:TieredStopAtLevel=1 -XX:+UseSerialGC --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow "-Dkotlin.home=$KOTLIN_HOME" -cp "$KOTLIN_HOME/lib/kotlin-compiler.jar" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -nowarn -jvm-target 11 -cp . -d /tmp/tested-aot/out EvaluationResult.kt Values.kt > /dev/null
+    test -s /usr/local/share/tested/kotlin/kotlinc.aot
+    cd /tmp/tested-aot/java
+    javac -J-XX:AOTCacheOutput=/usr/local/share/tested/java/javac.aot -J-XX:TieredStopAtLevel=1 -J-XX:+UseSerialGC -cp . -d /tmp/tested-aot/out EvaluationResult.java Values.java > /dev/null
+    test -s /usr/local/share/tested/java/javac.aot
+    chmod 644 /usr/local/share/tested/kotlin/kotlinc.aot /usr/local/share/tested/java/javac.aot
+    cd /
+    rm -rf /tmp/tested-aot
+EOF
+
 USER runner
 WORKDIR /home/runner/workdir
 
