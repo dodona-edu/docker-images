@@ -200,6 +200,19 @@ RUN <<EOF
     bash -c "cd /usr/local/share/tested/haskell/static && ghc -no-link -fno-cse -fno-full-laziness -O0 EvaluationUtils.hs Values.hs"
 EOF
 
+# Precompile TESTed's C++ helpers with the flags of CPP.compilation in
+# tested/languages/cpp/config.py, and record those flags next to the objects.
+# TESTed only links them if the sources and the flags match its own, and compiles
+# the sources itself otherwise. ADD keys the build cache on the downloaded content.
+ARG TESTED_CPP_TEMPLATES=https://raw.githubusercontent.com/dodona-edu/universal-judge/master/tested/languages/cpp/templates
+# hadolint ignore=DL3020
+ADD ${TESTED_CPP_TEMPLATES}/values.h ${TESTED_CPP_TEMPLATES}/values.cpp ${TESTED_CPP_TEMPLATES}/values.tpp ${TESTED_CPP_TEMPLATES}/evaluation_result.h ${TESTED_CPP_TEMPLATES}/evaluation_result.cpp /usr/local/share/tested/cpp/static/
+RUN <<EOF
+    set -eux
+    chmod 644 /usr/local/share/tested/cpp/static/*
+    bash -c 'cd /usr/local/share/tested/cpp/static && flags="-std=c++20 -Wall -O0" && g++ $flags -c values.cpp evaluation_result.cpp && echo "$flags" > flags'
+EOF
+
 USER runner
 WORKDIR /home/runner/workdir
 
