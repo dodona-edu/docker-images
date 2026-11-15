@@ -181,7 +181,7 @@ CFG
         /usr/share/dotnet/shared/Microsoft.AspNetCore.App
     # sdkman: extracted JDK/Kotlin zips, plus JDK sources and man pages (not needed to compile/run)
     rm -rf "$SDKMAN_DIR/archives/"* "$SDKMAN_DIR/tmp/"*
-    rm -f  "$SDKMAN_DIR"/candidates/java/*/src.zip
+    rm -f  "$SDKMAN_DIR"/candidates/java/*/lib/src.zip
     rm -rf "$SDKMAN_DIR"/candidates/java/*/man "$SDKMAN_DIR"/candidates/kotlin/*/licenses
 
     # Setup permissions and user
