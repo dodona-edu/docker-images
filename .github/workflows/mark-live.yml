@@ -380,6 +380,7 @@ jobs:
             "files": {
               "/dodona-tested.dockerfile": ".devcontainer/dodona-tested.dockerfile",
               "/main.sh": ".devcontainer/main.sh",
+              "/run-as-student.c": ".devcontainer/run-as-student.c",
               "/requirements/": ".devcontainer/dodona-tested/"
             }
           }

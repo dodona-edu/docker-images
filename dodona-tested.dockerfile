@@ -5,6 +5,18 @@
 # It should not contain any development tools or dependencies.
 # Add those to dev-dependencies.sh instead.
 
+FROM python:3.15.2-slim-trixie AS run-as-student
+
+COPY run-as-student.c /run-as-student.c
+
+RUN <<EOF
+    set -eux
+
+    apt-get update
+    apt-get install -y --no-install-recommends gcc libc6-dev
+    gcc -O2 -Wall -Wextra -Werror -o /run-as-student /run-as-student.c
+EOF
+
 FROM python:3.15.2-slim-trixie
 
 ARG GCC_MAJOR=14
@@ -179,6 +191,7 @@ CFG
     # Setup permissions and user
     chmod 711 /mnt
     useradd -m runner
+    useradd -m -u 1001 student
     mkdir /home/runner/workdir
     chown -R runner:runner /home/runner/workdir
 EOF
@@ -200,6 +213,8 @@ RUN <<EOF
     bash -c "cd /usr/local/share/tested/haskell/static && ghc -no-link -fno-cse -fno-full-laziness -O0 EvaluationUtils.hs Values.hs"
 EOF
 
+COPY --from=run-as-student --chown=root:runner --chmod=4750 /run-as-student /usr/local/bin/run-as-student
+
 USER runner
 WORKDIR /home/runner/workdir
 
@@ -207,3 +222,4 @@ COPY main.sh /main.sh
 # Ship the recipe the image was built from, so the judge's CI can check its
 # own copy against it.
 COPY dodona-tested.dockerfile /dodona-tested.dockerfile
+COPY run-as-student.c /run-as-student.c
