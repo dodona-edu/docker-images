@@ -133,6 +133,9 @@ CFG
     # GHC: drop profiling libs/interfaces, haddock/HTML docs, and debug symbols (unused at runtime)
     find "$HASKELL_DIR/ghc" -type f \( -name '*_p.a' -o -name '*.p_o' -o -name '*.p_hi' \) -delete
     rm -rf "$HASKELL_DIR/ghc/share/doc" "$HASKELL_DIR/ghc"/lib/*/doc
+    # GHC: the compiler API (package ghc) and Cabal. Their .so files stay: the ghc binaries link against them.
+    ghc-pkg unregister --global --force haddock-api ghc Cabal Cabal-syntax
+    rm -rf "$HASKELL_DIR"/ghc/lib/*/lib/*/ghc-[0-9]* "$HASKELL_DIR"/ghc/lib/*/lib/*/Cabal-* "$HASKELL_DIR"/ghc/lib/*/lib/*/haddock-api-*
     find "$HASKELL_DIR/ghc" -type f -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
     find "$HASKELL_DIR/ghc/bin" -type f -exec strip --strip-unneeded {} + 2>/dev/null || true
 
