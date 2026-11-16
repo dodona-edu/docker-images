@@ -62,7 +62,7 @@ prs_for() {
     number=${BASH_REMATCH[1]}
     [ "${BASH_REMATCH[2]}" != dodona-edu/dev ] || continue
     [ -z "$group" ] || tested_groups "$sha" | grep -qxF "$group" || continue
-    git diff --quiet "$sha^1" "$sha" -- "dodona-$image.dockerfile" "dodona-$image" || {
+    git diff --quiet "$sha^1" "$sha" -- "dodona-$image.dockerfile" "dodona-$image" main.sh || {
       title=$(git log -1 --format=%b "$sha" | sed -n 1p)
       title=${title:-$subject}
       printf '%s\n' "- ${title//@/@$zwsp} (#$number)"
