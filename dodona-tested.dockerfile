@@ -114,7 +114,7 @@ CFG
         vim \
         xxd \
         xz-utils
-    bash -c 'set -o pipefail && curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ --strip-components=1 -C /usr/local/bin "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"'
+    bash -c 'set -o pipefail && curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ --no-same-owner --strip-components=1 -C /usr/local/bin "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"'
 
     # JavaScript dependencies
     bash -c 'set -o pipefail && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash -'
@@ -134,7 +134,7 @@ CFG
         zlib1g-dev \
         libgmp-dev
     mkdir -p /usr/local/lib/hlint
-    bash -c 'set -o pipefail && curl -fsSL "https://github.com/ndmitchell/hlint/releases/download/v${HLINT_VERSION}/hlint-${HLINT_VERSION}-x86_64-linux.tar.gz" | tar -xz --strip-components=1 -C /usr/local/lib/hlint'
+    bash -c 'set -o pipefail && curl -fsSL "https://github.com/ndmitchell/hlint/releases/download/v${HLINT_VERSION}/hlint-${HLINT_VERSION}-x86_64-linux.tar.gz" | tar -xz --no-same-owner --strip-components=1 -C /usr/local/lib/hlint'
     ln -s /usr/local/lib/hlint/hlint /usr/local/bin/hlint
     bash -c "set -o pipefail && curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 BOOTSTRAP_HASKELL_MINIMAL=1 sh"
     bash -c "source /root/.ghcup/env && ghcup install ghc ${GHC_VERSION} --isolate $HASKELL_DIR/ghc"
