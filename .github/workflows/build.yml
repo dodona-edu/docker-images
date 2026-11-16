@@ -4,7 +4,6 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
     inputs:
       force_all:
@@ -140,14 +139,6 @@ jobs:
             core.setOutput('images', JSON.stringify(stale));
             console.log('Stale images:', stale);
 
-      - name: Set flags
-        uses: actions/github-script@v9
-        id: flags
-        with:
-          script: |
-            const labels = (context.payload.pull_request?.labels || []).map(l => l.name);
-            core.setOutput('rebuild_all', labels.includes('rebuild-all') ? 'true' : 'false');
-
       - name: Set matrix
         uses: actions/github-script@v9
         id: set-matrix
@@ -156,14 +147,13 @@ jobs:
           CHANGED: ${{ steps.filter.outputs.changes }}
           STALE: ${{ steps.stale.outputs.images }}
           FORCE_ALL: ${{ github.event.inputs.force_all || 'false' }}
-          REBUILD_ALL: ${{ steps.flags.outputs.rebuild_all }}
         with:
           script: |
             const all = JSON.parse(process.env.ALL_IMAGES);
             const detected = context.eventName === 'push'
               ? JSON.parse(process.env.STALE || '[]')
               : JSON.parse(process.env.CHANGED || '[]');
-            const forceAll = process.env.FORCE_ALL === 'true' || process.env.REBUILD_ALL === 'true';
+            const forceAll = process.env.FORCE_ALL === 'true';
             const selected = forceAll ? all : all.filter(i => detected.includes(i));
             core.setOutput('images', JSON.stringify(selected));
             core.setOutput('has_images', selected.length > 0 ? 'true' : 'false');
