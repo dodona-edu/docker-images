@@ -1,0 +1,225 @@
+name: Manifest
+
+# Classifies every image's :next against :latest, reports it, and outputs what would ship.
+
+on:
+  workflow_call:
+    outputs:
+      pending:
+        description: JSON array of the images whose :next would move to :latest
+        value: ${{ jobs.manifest.outputs.pending }}
+      refs:
+        description: JSON object mapping each pending image to <repository>@<:next digest>
+        value: ${{ jobs.manifest.outputs.refs }}
+  # Produces the pending report on demand, it never retags.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Resolves the digests :next holds for the retag. A stale image fails the
+  # manifest; an image with nothing pending does not.
+  manifest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      pending: ${{ steps.resolve.outputs.pending }}
+      refs: ${{ steps.resolve.outputs.refs }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Staleness reads history back to the commit :next was built from.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: images
+        run: echo "images=$(yq -o=json -I0 '.' images.yml)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Classify every image
+        id: resolve
+        uses: actions/github-script@v9
+        env:
+          ALL_IMAGES: ${{ steps.images.outputs.images }}
+          OWNER: ${{ github.repository_owner }}
+        with:
+          script: |
+            const all = JSON.parse(process.env.ALL_IMAGES);
+
+            const run = (command, args) =>
+              exec.getExecOutput(command, args, { ignoreReturnCode: true, silent: true });
+
+            // {{.Manifest.Digest}} silently renders the whole output, not the digest.
+            const digestOf = async (ref) => {
+              const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Manifest}}']);
+              if (inspected.exitCode !== 0) {
+                console.log(`${ref}: imagetools inspect failed (exit ${inspected.exitCode}): ${inspected.stderr.trim()}`);
+                return '';
+              }
+              try {
+                return JSON.parse(inspected.stdout).digest || '';
+              } catch {
+                return '';
+              }
+            };
+
+            // {{json .Image}} carries the config, and with it the labels the build stamped.
+            const revisionOf = async (ref) => {
+              const inspected = await run('docker', ['buildx', 'imagetools', 'inspect', ref, '--format', '{{json .Image}}']);
+              if (inspected.exitCode !== 0) {
+                console.log(`${ref}: imagetools inspect failed (exit ${inspected.exitCode}): ${inspected.stderr.trim()}`);
+                return '';
+              }
+              try {
+                return JSON.parse(inspected.stdout).config?.Labels?.['org.opencontainers.image.revision'] || '';
+              } catch {
+                return '';
+              }
+            };
+
+            // Every image copies main.sh. build.yml and release-notes.sh list these same paths; keep the three in sync.
+            const pathsOf = (image) => [`dodona-${image}.dockerfile`, `dodona-${image}`, 'main.sh'];
+
+            // Anything that leaves the answer unknown counts as stale: publishing an
+            // image older than master is worse than asking for a rebuild.
+            const stalenessOf = async (image, revision) => {
+              if (!revision) {
+                return 'the staged image carries no revision label';
+              }
+
+              const known = await run('git', ['cat-file', '-e', `${revision}^{commit}`]);
+              if (known.exitCode !== 0) {
+                return `the repository does not have commit ${revision}`;
+              }
+
+              const changed = await run('git', ['diff', '--quiet', revision, 'HEAD', '--', ...pathsOf(image)]);
+              if (changed.exitCode === 1) {
+                return `the image's files changed since ${revision}`;
+              }
+              if (changed.exitCode !== 0) {
+                return `the files since ${revision} could not be compared (${changed.stderr.trim()})`;
+              }
+
+              return '';
+            };
+
+            const resolved = await Promise.all(all.map(async (image) => {
+              const repository = `ghcr.io/${process.env.OWNER}/dodona-${image}`;
+              const [next, current] = await Promise.all([digestOf(`${repository}:next`), digestOf(`${repository}:latest`)]);
+              // Also needed for the "built from" line below, so keep it rather than
+              // discarding it once the staleness check has read it.
+              const nextRevision = next ? await revisionOf(`${repository}:next`) : '';
+              const staleness = next ? await stalenessOf(image, nextRevision) : '';
+              return { image, repository, next, current, nextRevision, staleness };
+            }));
+
+            const rows = [];
+            const pending = [];
+            const blocking = [];
+
+            for (const { image, repository, next, current, nextRevision, staleness } of resolved) {
+              if (next && staleness) {
+                console.log(`${image}: stale, ${staleness}`);
+                // Only fetched for rows that actually render a "replacing" sub-bullet,
+                // to spare a registry call for the up to date / not staged rows below.
+                const currentRevision = current ? await revisionOf(`${repository}:latest`) : '';
+                rows.push({ image, status: 'stale', level: 'red', latest: current, ships: next, note: `${staleness}, a build on master has to land first`, nextRevision, currentRevision });
+                blocking.push(image);
+                continue;
+              }
+
+              if (next && next !== current) {
+                console.log(`${image}: ${current || 'none'} -> ${next}`);
+                const currentRevision = current ? await revisionOf(`${repository}:latest`) : '';
+                rows.push({ image, status: 'pending', level: 'ok', latest: current, ships: next, note: '', nextRevision, currentRevision });
+                pending.push({ image, repository, next, current });
+                continue;
+              }
+
+              if (next) {
+                console.log(`${image}: :next is already :latest (${next})`);
+                rows.push({ image, status: 'up to date', level: 'ok', latest: current, ships: '', note: '' });
+                continue;
+              }
+
+              console.log(`${image}: no :next tag`);
+              rows.push({ image, status: 'not staged', level: 'warn', latest: current, ships: '', note: 'nothing to ship, :latest stays where it is' });
+            }
+
+            const icon = { red: '❌', warn: '⚠️', ok: '✅' };
+
+            // Digests answer identity but not "what code is this", so link the
+            // revision label back to the commit it was built from.
+            const commitUrl = (revision) => `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${revision}`;
+            const builtFrom = (revision) => revision ? ` built from [\`${revision.slice(0, 7)}\`](${commitUrl(revision)})` : '';
+
+            // A nested list instead of a table: the full sha256 digests need to stay
+            // copy-pasteable for rollbacks, and two full-digest table columns force
+            // horizontal scrolling and kill scannability.
+            const renderManifest = () => {
+              const lines = [];
+              lines.push('## Manifest');
+              lines.push('');
+              lines.push(`${pending.length} image(s) would ship.`);
+
+              const renderRows = (rowsToRender) => {
+                for (const { image, status, level, latest, ships, note, nextRevision, currentRevision } of rowsToRender) {
+                  const summary = note ? `${status}, ${note}` : status;
+                  lines.push(`- ${icon[level]} \`${image}\` ${summary}`);
+
+                  if (ships) {
+                    lines.push(`  - ships \`${ships}\`${builtFrom(nextRevision)}`);
+                    if (latest) {
+                      lines.push(`  - replacing \`${latest}\`${builtFrom(currentRevision)}`);
+                    }
+                  }
+                }
+              };
+
+              // What ships goes first: pending, then red (stale), then warn. Alphabetical
+              // within each group falls out of images.yml's own order, which rows never
+              // reshuffles. Up to date carries no urgency, so it moves below the fold.
+              const upToDate = rows.filter((row) => row.status === 'up to date');
+              const shipping = rows.filter((row) => row.status !== 'up to date');
+              const ordered = [
+                ...shipping.filter((row) => row.level === 'ok'),
+                ...shipping.filter((row) => row.level === 'red'),
+                ...shipping.filter((row) => row.level === 'warn'),
+              ];
+
+              if (ordered.length > 0) {
+                lines.push('');
+                renderRows(ordered);
+              }
+
+              if (upToDate.length > 0) {
+                lines.push('');
+                lines.push('<details>');
+                lines.push(`<summary>${upToDate.length} up to date</summary>`);
+                lines.push('');
+                renderRows(upToDate);
+                lines.push('');
+                lines.push('</details>');
+              }
+
+              return lines.join('\n');
+            };
+
+            const manifest = renderManifest();
+            await core.summary.addRaw(`${manifest}\n`).write();
+
+            core.setOutput('pending', JSON.stringify(pending));
+            core.setOutput('refs', JSON.stringify(Object.fromEntries(pending.map(({ image, repository, next }) => [image, `${repository}@${next}`]))));
+
+            if (blocking.length > 0) {
+              core.setFailed(`${blocking.join(', ')} would not publish safely, see the manifest above for why.`);
+            }

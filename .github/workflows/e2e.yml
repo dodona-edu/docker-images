@@ -1,0 +1,230 @@
+name: E2E
+
+# Runs each consumer judge on the exact image reference it is given.
+
+on:
+  workflow_call:
+    inputs:
+      refs:
+        description: JSON object mapping each image to verify to its full reference, e.g. {"html":"ghcr.io/dodona-edu/dodona-html:pr-12"}
+        required: true
+        type: string
+    # A Dependabot run has none of these; the job that needs one then fails on its own.
+    secrets:
+      PGJUDGE_DEPLOY_TOKEN:
+        description: GitLab deploy token that can read the judge
+        required: false
+      JUDGE_PYTHIA_CHECKOUT_KEY:
+        description: Read-only checkout key for judge-pythia
+        required: false
+      JUDGE_BASH_CHECKOUT_KEY:
+        description: Read-only checkout key for judge-bash
+        required: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  judge-html:
+    if: ${{ fromJSON(inputs.refs).html }}
+    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@main
+    with:
+      image: ${{ fromJSON(inputs.refs).html }}
+
+  judge-sql:
+    if: ${{ fromJSON(inputs.refs).sqlite }}
+    uses: dodona-edu/judge-sql/.github/workflows/e2e.yml@main
+    with:
+      image: ${{ fromJSON(inputs.refs).sqlite }}
+
+  judge-assembly:
+    if: ${{ fromJSON(inputs.refs).assembly }}
+    uses: dodona-edu/judge-assembly/.github/workflows/e2e.yml@main
+    with:
+      image: ${{ fromJSON(inputs.refs).assembly }}
+
+  judge-prolog:
+    if: ${{ fromJSON(inputs.refs).prolog }}
+    uses: dodona-edu/judge-prolog/.github/workflows/e2e.yml@master
+    with:
+      image: ${{ fromJSON(inputs.refs).prolog }}
+
+  judge-haskell:
+    if: ${{ fromJSON(inputs.refs).haskell }}
+    uses: dodona-edu/judge-haskell/.github/workflows/e2e.yml@master
+    with:
+      image: ${{ fromJSON(inputs.refs).haskell }}
+
+  judge-scheme:
+    if: ${{ fromJSON(inputs.refs).scheme }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The judge lives on the VUB's GitLab, not in dodona-edu.
+      - name: Clone the judge
+        run: git clone --depth 1 --branch master https://gitlab.soft.vub.ac.be/Structuur1/dodona-judge.git "$RUNNER_TEMP/judge"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run the smoke test
+        run: dodona-scheme/e2e/smoke-test "$RUNNER_TEMP/judge" "$IMAGE"
+        env:
+          IMAGE: ${{ fromJSON(inputs.refs).scheme }}
+
+  judge-postgres:
+    if: ${{ fromJSON(inputs.refs).postgres }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The judge lives in a private repository of UGent's DDCM group, not in dodona-edu.
+      - name: Clone the judge
+        run: git clone --depth 1 --branch deploy "https://${TOKEN_USERNAME}:${TOKEN}@gitlab.com/ddcm-education/dodona/pgjudge.git" "$RUNNER_TEMP/judge"
+        env:
+          TOKEN_USERNAME: ${{ vars.PGJUDGE_DEPLOY_TOKEN_USERNAME }}
+          TOKEN: ${{ secrets.PGJUDGE_DEPLOY_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run the smoke test
+        run: dodona-postgres/e2e/smoke-test "$RUNNER_TEMP/judge" "$IMAGE"
+        env:
+          IMAGE: ${{ fromJSON(inputs.refs).postgres }}
+
+  judge-c:
+    if: ${{ fromJSON(inputs.refs).c }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The judge lives in a personal GitHub account, not in dodona-edu.
+      - name: Clone the judge
+        run: git clone --depth 1 --branch master https://github.com/mvdcamme/C-Judge.git "$RUNNER_TEMP/judge"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run the smoke test
+        run: dodona-c/e2e/smoke-test "$RUNNER_TEMP/judge" "$IMAGE"
+        env:
+          IMAGE: ${{ fromJSON(inputs.refs).c }}
+
+  judge-r:
+    if: ${{ fromJSON(inputs.refs).r }}
+    uses: dodona-edu/judge-r/.github/workflows/e2e.yml@master
+    with:
+      image: ${{ fromJSON(inputs.refs).r }}
+
+  judge-compilers:
+    if: ${{ fromJSON(inputs.refs).compilers }}
+    uses: dodona-edu/judge-compilers/.github/workflows/e2e.yml@main
+    with:
+      image: ${{ fromJSON(inputs.refs).compilers }}
+
+  judge-markdown:
+    if: ${{ fromJSON(inputs.refs).markdown }}
+    uses: dodona-edu/judge-markdown/.github/workflows/e2e.yml@master
+    with:
+      image: ${{ fromJSON(inputs.refs).markdown }}
+
+  judge-java:
+    if: ${{ fromJSON(inputs.refs).java }}
+    uses: dodona-edu/judge-java/.github/workflows/e2e.yml@master
+    with:
+      image: ${{ fromJSON(inputs.refs).java }}
+
+  judge-csharp:
+    if: ${{ fromJSON(inputs.refs).csharp }}
+    uses: dodona-edu/judge-csharp/.github/workflows/e2e.yml@master
+    with:
+      image: ${{ fromJSON(inputs.refs).csharp }}
+
+  # judge-pythia is private, so this job checks it out with a read-only checkout key. The image
+  # ships no git or ssh client, so the checkout runs on the runner and the tests in the image.
+  judge-pythia:
+    if: ${{ fromJSON(inputs.refs).python }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: dodona-edu/judge-pythia
+          ref: master
+          ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+          persist-credentials: false
+      - name: Run judge-pythia's tests in the image
+        env:
+          IMAGE: ${{ fromJSON(inputs.refs).python }}
+        # SKIP_RUFF_VERSION_TEST: judge-pythia's requirements-match-image guards the ruff pin; the test would fail every ruff bump here
+        run: docker run --rm --user root -e SKIP_RUFF_VERSION_TEST=1 -v "$PWD:/judge" -w /judge "$IMAGE" devel/run-tests-in-image.sh
+
+  # judge-bash is private, so this job checks it out with a read-only checkout key. The image
+  # ships no ssh client, so the checkout runs on the runner and the suite in the image.
+  judge-bash:
+    if: ${{ fromJSON(inputs.refs).bash }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: dodona-edu/judge-bash
+          ref: master
+          ssh-key: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
+          persist-credentials: false
+      - name: Run the judge-bash suite
+        env:
+          IMAGE: ${{ fromJSON(inputs.refs).bash }}
+        run: ./devel/run-tests-in-image.sh
+
+  judge-turtle:
+    if: ${{ fromJSON(inputs.refs).python }}
+    uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@main
+    with:
+      image: ${{ fromJSON(inputs.refs).python }}
+
+  universal-judge:
+    if: ${{ fromJSON(inputs.refs).tested }}
+    uses: dodona-edu/universal-judge/.github/workflows/e2e.yml@master
+    with:
+      image: ${{ fromJSON(inputs.refs).tested }}
+
+  # A new image without a job above would otherwise pass unverified.
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Fail when an image has no job here
+        env:
+          REFS: ${{ inputs.refs }}
+        run: |
+          status=0
+          for image in $(jq -r 'keys[]' <<< "$REFS"); do
+            if ! grep -qF "fromJSON(inputs.refs).$image }}" .github/workflows/e2e.yml; then
+              echo "::error::No job in e2e.yml verifies $image"
+              status=1
+            fi
+          done
+          exit "$status"
