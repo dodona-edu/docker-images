@@ -105,8 +105,11 @@ jobs:
               }
             };
 
+            // Root files copied into an image. Keep in sync with both copies in build.yml.
+            const sharedFiles = { python: ['run-as-student.c'], tested: ['run-as-student.c'] };
+
             // build.yml derives these same paths for its own staleness check; keep the two in sync.
-            const pathsOf = (image) => [`dodona-${image}.dockerfile`, `dodona-${image}`];
+            const pathsOf = (image) => [`dodona-${image}.dockerfile`, `dodona-${image}`, ...(sharedFiles[image] ?? [])];
 
             // Anything that leaves the answer unknown counts as stale: publishing an
             // image older than master is worse than asking for a rebuild.

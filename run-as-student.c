@@ -51,6 +51,12 @@ int main(int argc, char **argv) {
             _exit(2);
         }
 
+        /* Set-uid programs such as su and mount then give the command no privileges. */
+        if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) {
+            perror("run-as-student: prctl");
+            _exit(2);
+        }
+
         execvp(argv[1], argv + 1);
         perror("run-as-student: exec");
         _exit(127);
@@ -77,6 +83,7 @@ int main(int argc, char **argv) {
         int signal_number = WTERMSIG(status);
         signal(signal_number, SIG_DFL);
         kill(getpid(), signal_number);
+        return 128 + signal_number;
     }
     return WEXITSTATUS(status);
 }
