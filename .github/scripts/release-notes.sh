@@ -77,7 +77,7 @@ tested_languages() {
     TEMURIN_VERSION) printf '%s\n' Java Kotlin ;;
     KOTLIN_VERSION | KTLINT_VERSION) echo Kotlin ;;
     CHECKSTYLE_VERSION) echo Java ;;
-    GHC_VERSION | CABAL_VERSION | AESON_VERSION | HLINT_VERSION) echo Haskell ;;
+    GHC_VERSION | CABAL_VERSION | RANDOM_VERSION | HLINT_VERSION) echo Haskell ;;
     NODE_MAJOR | dodona-tested/package.json) echo JavaScript/TypeScript ;;
     GCC_MAJOR | CPPCHECK_VERSION) echo C/C++ ;;
     DOTNET_SDK_CHANNEL) echo C# ;;

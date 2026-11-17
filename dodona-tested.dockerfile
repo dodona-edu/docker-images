@@ -28,7 +28,7 @@ ENV PATH=$HASKELL_DIR/ghc/bin:$PATH
 ENV PATH=$HASKELL_DIR/cabal:$PATH
 ARG GHC_VERSION=9.14.1
 ARG CABAL_VERSION=3.18.2.0
-ARG AESON_VERSION=2.3.2.0
+ARG RANDOM_VERSION=1.3.1
 ARG HLINT_VERSION=3.10
 # Node
 ENV NODE_PATH=/usr/lib/node_modules
@@ -128,7 +128,7 @@ CFG
     bash -c "source /root/.ghcup/env && ghcup install ghc ${GHC_VERSION} --isolate $HASKELL_DIR/ghc"
     bash -c "source /root/.ghcup/env && ghcup install cabal ${CABAL_VERSION} --isolate $HASKELL_DIR/cabal"
     cabal update
-    cabal v1-install --global aeson-${AESON_VERSION}
+    cabal v1-install --global random-${RANDOM_VERSION}
 
     # GHC: drop profiling libs/interfaces, haddock/HTML docs, and debug symbols (unused at runtime)
     find "$HASKELL_DIR/ghc" -type f \( -name '*_p.a' -o -name '*_p.so' -o -name '*_p-ghc*.so' -o -name '*.p_o' -o -name '*.p_hi' -o -name '*.p_dyn_hi' -o -name 'ghc-iserv-prof*' \) -delete
@@ -170,7 +170,7 @@ CFG
     rm -rf /root/.cache
     rm -rf /root/.npm
     rm -rf /usr/local/sdkman/tmp
-    # Haskell: downloaded Hackage tarballs and ghcup download cache (aeson lives in GHC's global db)
+    # Haskell: downloaded Hackage tarballs and ghcup download cache (random lives in GHC's global db)
     rm -rf /root/.cabal/packages /root/.cabal/logs /root/.ghcup/cache /root/.ghcup/tmp
     # .NET: NuGet/dotnet download and first-run caches
     rm -rf /root/.nuget /root/.dotnet /tmp/NuGet* /tmp/.dotnet "${HOME}/.local/share/NuGet"
