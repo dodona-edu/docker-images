@@ -105,8 +105,8 @@ jobs:
               }
             };
 
-            // build.yml derives these same paths for its own staleness check; keep the two in sync.
-            const pathsOf = (image) => [`dodona-${image}.dockerfile`, `dodona-${image}`];
+            // Every image copies main.sh. build.yml and release-notes.sh list these same paths; keep the three in sync.
+            const pathsOf = (image) => [`dodona-${image}.dockerfile`, `dodona-${image}`, 'main.sh'];
 
             // Anything that leaves the answer unknown counts as stale: publishing an
             // image older than master is worse than asking for a rebuild.
