@@ -29,6 +29,7 @@ jobs:
     outputs:
       images: ${{ steps.set-matrix.outputs.images }}
       has_images: ${{ steps.set-matrix.outputs.has_images }}
+      refs: ${{ steps.set-matrix.outputs.refs }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -147,6 +148,7 @@ jobs:
           CHANGED: ${{ steps.filter.outputs.changes }}
           STALE: ${{ steps.stale.outputs.images }}
           FORCE_ALL: ${{ github.event.inputs.force_all || 'false' }}
+          OWNER: ${{ github.repository_owner }}
         with:
           script: |
             const all = JSON.parse(process.env.ALL_IMAGES);
@@ -157,6 +159,10 @@ jobs:
             const selected = forceAll ? all : all.filter(i => detected.includes(i));
             core.setOutput('images', JSON.stringify(selected));
             core.setOutput('has_images', selected.length > 0 ? 'true' : 'false');
+            const refs = context.eventName === 'pull_request'
+              ? Object.fromEntries(selected.map(i => [i, `ghcr.io/${process.env.OWNER}/dodona-${i}:pr-${context.payload.pull_request.number}`]))
+              : {};
+            core.setOutput('refs', JSON.stringify(refs));
             console.log('Selected images:', selected);
 
   build:
@@ -189,7 +195,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    # A build on master stages to :next, publish.yml moves it to :latest.
+    # A build on master stages to :next, the publish job moves it to :latest.
     - name: Set docker tags
       id: meta
       uses: docker/metadata-action@v6
@@ -215,207 +221,33 @@ jobs:
         # The registry cache never expires: a forced rebuild skips it, or it would refresh nothing.
         no-cache: ${{ github.event.inputs.force_all == 'true' }}
 
-  # Runs the consumer judge on the exact image built for this pull request.
-  e2e-judge-html:
+  manifest:
     needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'html') }}
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && github.ref_name == 'master' && needs.detect.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     permissions:
       contents: read
       packages: read
-    uses: dodona-edu/judge-html/.github/workflows/e2e.yml@main
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-html:pr-${{ github.event.pull_request.number }}
+    uses: ./.github/workflows/manifest.yml
 
-  e2e-judge-sql:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'sqlite') }}
+  # Pull requests verify their :pr-N images, master the :next digests publish moves.
+  e2e:
+    needs: [detect, build, manifest]
+    if: ${{ !cancelled() && ((github.event_name == 'pull_request' && needs.build.result == 'success') || needs.manifest.result == 'success') }}
     permissions:
       contents: read
       packages: read
-    uses: dodona-edu/judge-sql/.github/workflows/e2e.yml@main
+    uses: ./.github/workflows/e2e.yml
     with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-sqlite:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-assembly:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'assembly') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-assembly/.github/workflows/e2e.yml@main
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-assembly:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-prolog:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'prolog') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-prolog/.github/workflows/e2e.yml@master
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-prolog:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-haskell:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'haskell') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-haskell/.github/workflows/e2e.yml@master
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-haskell:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-scheme:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'scheme') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: ./.github/workflows/e2e-judge-scheme.yml
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-scheme:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-postgres:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'postgres') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: ./.github/workflows/e2e-judge-postgres.yml
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-postgres:pr-${{ github.event.pull_request.number }}
+      refs: ${{ github.event_name == 'pull_request' && needs.detect.outputs.refs || needs.manifest.outputs.refs }}
     secrets:
       PGJUDGE_DEPLOY_TOKEN: ${{ secrets.PGJUDGE_DEPLOY_TOKEN }}
+      JUDGE_PYTHIA_CHECKOUT_KEY: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
+      JUDGE_BASH_CHECKOUT_KEY: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
 
-  e2e-judge-c:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'c') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: ./.github/workflows/e2e-judge-c.yml
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-c:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-r:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'r') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-r/.github/workflows/e2e.yml@master
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-r:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-compilers:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'compilers') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-compilers/.github/workflows/e2e.yml@main
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-compilers:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-markdown:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'markdown') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-markdown/.github/workflows/e2e.yml@master
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-markdown:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-java:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'java') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-java/.github/workflows/e2e.yml@master
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-java:pr-${{ github.event.pull_request.number }}
-
-  e2e-judge-csharp:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'csharp') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-csharp/.github/workflows/e2e.yml@master
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-csharp:pr-${{ github.event.pull_request.number }}
-
-  # Both judges run on the exact image built for this pull request.
-  # judge-pythia is private, so this job checks it out with a read-only checkout key. The image
-  # ships no git or ssh client, so the checkout runs on the runner and the tests in the image.
-  e2e-judge-pythia:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
-    permissions:
-      contents: read
-      packages: read
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          repository: dodona-edu/judge-pythia
-          ref: master
-          ssh-key: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
-          persist-credentials: false
-      - name: Run judge-pythia's tests in the image
-        env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
-        # SKIP_RUFF_VERSION_TEST: judge-pythia's requirements-match-image guards the ruff pin; the test would fail every ruff bump here
-        run: docker run --rm --user root -e SKIP_RUFF_VERSION_TEST=1 -v "$PWD:/judge" -w /judge "$IMAGE" devel/run-tests-in-image.sh
-
-  # judge-bash is private, so this job checks it out with a read-only checkout key. The image
-  # ships no ssh client, so the checkout runs on the runner and the suite in the image.
-  e2e-judge-bash:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'bash') }}
-    permissions:
-      contents: read
-      packages: read
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          repository: dodona-edu/judge-bash
-          ref: master
-          ssh-key: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
-          persist-credentials: false
-      - name: Run the judge-bash suite
-        env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/dodona-bash:pr-${{ github.event.pull_request.number }}
-        run: ./devel/run-tests-in-image.sh
-
-  e2e-judge-turtle:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'python') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/judge-turtle/.github/workflows/e2e.yml@main
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-python:pr-${{ github.event.pull_request.number }}
-
-  e2e-universal-judge:
-    needs: [detect, build]
-    if: ${{ github.event_name == 'pull_request' && contains(fromJson(needs.detect.outputs.images), 'tested') }}
-    permissions:
-      contents: read
-      packages: read
-    uses: dodona-edu/universal-judge/.github/workflows/e2e.yml@master
-    with:
-      image: ghcr.io/${{ github.repository_owner }}/dodona-tested:pr-${{ github.event.pull_request.number }}
-
-  # Required-check anchor: the gate jobs report different check names when they
-  # run versus when they skip, so rulesets require this job instead.
+  # Rulesets require this job, not the gate jobs, whose check names differ between run and skip.
+  # Publish waits on it too: every gate that ran must pass.
   gates:
-    needs: [detect, build, e2e-judge-html, e2e-judge-sql, e2e-judge-assembly, e2e-judge-prolog, e2e-judge-haskell, e2e-judge-scheme, e2e-judge-postgres, e2e-judge-c, e2e-judge-r, e2e-judge-compilers, e2e-judge-markdown, e2e-judge-java, e2e-judge-csharp, e2e-judge-pythia, e2e-judge-bash, e2e-judge-turtle, e2e-universal-judge]
+    needs: [detect, build, manifest, e2e]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -424,16 +256,47 @@ jobs:
         run: exit 1
 
   # Same run and concurrency lane as the build, so :next cannot move before the retag.
+  # :previous keeps the digest :latest pointed at before this run, so rolling back is retagging it.
   publish:
-    needs: [detect, build]
-    if: ${{ !cancelled() && github.event_name != 'pull_request' && github.ref_name == 'master' && needs.detect.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    needs: [manifest, e2e, gates]
+    # A failed or skipped gate leaves every :latest where it was.
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && github.ref_name == 'master' && needs.manifest.result == 'success' && needs.e2e.result == 'success' && needs.gates.result == 'success' && needs.manifest.outputs.pending != '[]' }}
+    runs-on: ubuntu-latest
     permissions:
-      contents: read
       packages: write
-    uses: ./.github/workflows/publish.yml
-    with:
-      ship: true
-    secrets:
-      PGJUDGE_DEPLOY_TOKEN: ${{ secrets.PGJUDGE_DEPLOY_TOKEN }}
-      JUDGE_PYTHIA_CHECKOUT_KEY: ${{ secrets.JUDGE_PYTHIA_CHECKOUT_KEY }}
-      JUDGE_BASH_CHECKOUT_KEY: ${{ secrets.JUDGE_BASH_CHECKOUT_KEY }}
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Move next to latest
+        uses: actions/github-script@v9
+        env:
+          PENDING: ${{ needs.manifest.outputs.pending }}
+        with:
+          script: |
+            const pending = JSON.parse(process.env.PENDING);
+
+            const summary = (line) => core.summary.addRaw(`${line}\n`).write();
+
+            await summary('## Published');
+            await summary('');
+            await summary('| image | :latest |');
+            await summary('| --- | --- |');
+
+            for (const { image, repository, next, current } of pending) {
+              const from = current ? `\`${current}\`` : 'nothing';
+
+              if (current) {
+                await exec.exec('docker', ['buildx', 'imagetools', 'create', '-t', `${repository}:previous`, `${repository}@${current}`]);
+              }
+              await exec.exec('docker', ['buildx', 'imagetools', 'create', '-t', `${repository}:latest`, `${repository}@${next}`]);
+
+              await summary(`| \`${image}\` | moved to \`${next}\` from ${from} |`);
+            }
+
+            await summary('');
+            await summary(`Published ${pending.length} image(s).`);
