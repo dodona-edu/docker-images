@@ -361,6 +361,7 @@ jobs:
             gh release create "$tag" --target "$GITHUB_SHA" --title "$title" --notes-file "$body" --latest
           fi
 
+  # rebuild-judge-java-jar mirrors this job's secrets, token and pull request handling: change both together.
   sync:
     needs: tag
     if: ${{ needs.tag.outputs.moved != '[]' }}
@@ -524,3 +525,118 @@ jobs:
             summary "Opened $url with auto merge, waiting for an approval."
             summary
           done
+
+  # Mirrors sync's secrets, token and pull request handling: change both together.
+  rebuild-judge-java-jar:
+    needs: tag
+    if: ${{ contains(fromJSON(needs.tag.outputs.moved), 'java') }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    env:
+      MOVES: ${{ needs.tag.outputs.moves }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Check the App secrets
+        id: secrets
+        env:
+          APP_CLIENT_ID: ${{ secrets.TESTED_SYNC_APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.TESTED_SYNC_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$APP_CLIENT_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          elif [ "$DRY_RUN" = true ]; then
+            echo "::warning::The GitHub App secrets TESTED_SYNC_APP_CLIENT_ID and TESTED_SYNC_APP_PRIVATE_KEY are missing: rebuilding against an anonymous public checkout."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::The :live tags have moved, but the judge-java jar was not rebuilt: the GitHub App secrets TESTED_SYNC_APP_CLIENT_ID and TESTED_SYNC_APP_PRIVATE_KEY are missing."
+            exit 1
+          fi
+
+      - name: Create the App token
+        id: token
+        if: ${{ steps.secrets.outputs.present == 'true' }}
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.TESTED_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.TESTED_SYNC_APP_PRIVATE_KEY }}
+          owner: dodona-edu
+          repositories: judge-java
+
+      - name: Rebuild the judge jar
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          summary() { printf '%s\n' "$*" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          created_by() { unzip -p "$1" META-INF/MANIFEST.MF | tr -d '\r' | sed -n 's/^Created-By: //p'; }
+
+          repo=judge-java
+          branch=chore/rebuild-judge-jar
+          subject='Rebuild the judge jar for the live dodona-java image'
+          ref="ghcr.io/dodona-edu/dodona-java@$(jq -r '.java.to' <<<"$MOVES")"
+          clone="$RUNNER_TEMP/judge-java"
+
+          summary "### dodona-java to dodona-edu/$repo"
+          summary
+
+          git clone --quiet --depth 1 "https://github.com/dodona-edu/$repo.git" "$clone"
+          git -C "$clone" config user.name 'github-actions[bot]'
+          git -C "$clone" config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          (cd "$clone" && IMAGE="$ref" ./devel/build-jar.sh)
+
+          if git -C "$clone" diff --quiet -- dist/judge.jar; then
+            summary "\`dist/judge.jar\` in \`$repo\` already matches a build in \`$ref\`: nothing to rebuild."
+            pr=
+            if [ -n "$GH_TOKEN" ]; then
+              pr=$(gh pr list --repo "dodona-edu/$repo" --head "$branch" --state open --json url --jq '.[0].url // empty')
+            fi
+            if [ -n "$pr" ] && [ "$DRY_RUN" = true ]; then
+              summary "Dry run: would close the open jar rebuild PR $pr (branch \`$branch\`), because \`dist/judge.jar\` already matches \`$ref\`."
+            elif [ -n "$pr" ]; then
+              gh pr close --repo "dodona-edu/$repo" "$branch" --delete-branch --comment "Closed because dist/judge.jar already matches a build in the new :live image ($ref); triggered by $RUN_URL."
+              summary "Closed the open jar rebuild PR $pr (branch \`$branch\`), because \`dist/judge.jar\` already matches \`$ref\`."
+            fi
+            summary
+            exit 0
+          fi
+
+          if [ "$DRY_RUN" = true ]; then
+            git -C "$clone" show HEAD:dist/judge.jar > "$RUNNER_TEMP/old.jar"
+            summary "Dry run, nothing pushed. \`dist/judge.jar\` in \`$repo\` differs from a build in \`$ref\`:"
+            summary
+            summary "| | sha256 | Created-By |"
+            summary "| --- | --- | --- |"
+            summary "| default branch | \`$(sha256sum "$RUNNER_TEMP/old.jar" | cut -d' ' -f1)\` | $(created_by "$RUNNER_TEMP/old.jar") |"
+            summary "| rebuilt | \`$(sha256sum "$clone/dist/judge.jar" | cut -d' ' -f1)\` | $(created_by "$clone/dist/judge.jar") |"
+            summary
+            exit 0
+          fi
+
+          git -C "$clone" add dist/judge.jar
+          git -C "$clone" commit --quiet -m "$subject" -m "Built in $ref, now :live.
+
+          Workflow run: $RUN_URL"
+          git -C "$clone" push --quiet --force "https://x-access-token:$GH_TOKEN@github.com/dodona-edu/$repo.git" "HEAD:refs/heads/$branch"
+
+          if [ "$(gh pr list --repo "dodona-edu/$repo" --head "$branch" --state open --json number --jq length)" -gt 0 ]; then
+            summary "Updated the open jar rebuild PR of \`$repo\` (branch \`$branch\`)."
+            summary
+            exit 0
+          fi
+
+          body="$RUNNER_TEMP/body.md"
+          {
+            echo "The jar is rebuilt in \`$ref\`, now \`:live\`. Triggered by [this workflow run]($RUN_URL)."
+            echo
+            echo "This branch is rewritten on every go-live: do not edit it by hand."
+          } > "$body"
+          url=$(gh pr create --repo "dodona-edu/$repo" --head "$branch" --title "$subject" --body-file "$body")
+          gh pr edit "$url" --add-reviewer bmesuere,thvmulle
+          gh pr merge "$url" --auto --merge
+          summary "Opened $url with auto merge, waiting for an approval."
+          summary
