@@ -1,4 +1,4 @@
-FROM swipl:10.0.2
+FROM swipl:11.0.0
 
 RUN <<EOF
   set -eux
